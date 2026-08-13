@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, Dumbbell, Home, UserRound, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -10,13 +11,20 @@ const nav = [
   { to: "/profile", label: "You", icon: UserRound },
 ] as const;
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const active = useFitnessStore((s) => s.active);
+  const cinema = pathname === "/workout";
 
   return (
     <div className="mesh-bg min-h-dvh">
-      <div className="mx-auto flex min-h-dvh w-full max-w-lg flex-col px-4 pt-4 md:max-w-3xl md:px-6">
+      <div
+        className={cn(
+          "mx-auto flex min-h-dvh w-full max-w-lg flex-col md:max-w-3xl",
+          cinema ? "px-0 pt-0" : "px-4 pt-4 md:px-6",
+        )}
+      >
+        {!cinema && (
         <header className="mb-4 flex items-center justify-between gap-3">
           <Link to="/" className="group flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-md)] bg-[var(--color-primary)] text-[var(--color-primary-fg)] shadow-[0_0_24px_color-mix(in_oklab,var(--color-primary)_35%,transparent)]">
@@ -38,9 +46,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           )}
         </header>
+        )}
 
-        <main className="flex-1 pb-28">{children}</main>
+        <main className={cn("flex-1", cinema ? "pb-4" : "pb-28")}>{children}</main>
 
+        {!cinema && (
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-bg)_92%,transparent)] backdrop-blur-md safe-pb">
           <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 py-2 md:max-w-3xl">
             {nav.map(({ to, label, icon: Icon }) => {
@@ -66,6 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             })}
           </div>
         </nav>
+        )}
       </div>
     </div>
   );

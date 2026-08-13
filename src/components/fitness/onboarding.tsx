@@ -21,6 +21,7 @@ import {
   GEAR_OPTIONS,
   type GearKit,
 } from "@/data/programs";
+import { CoachPresence } from "@/components/fitness/coach-presence";
 import { useFitnessStore, type UserProfile } from "@/store/fitness";
 import { cn } from "@/lib/utils";
 
@@ -291,36 +292,14 @@ export function Onboarding() {
               Demo coach
             </Label>
             <p className="text-xs text-[var(--color-muted)]">
-              Who shows form in videos — change anytime in profile.
+              Who shows form. Change anytime in profile.
             </p>
-            <div className="grid grid-cols-2 gap-2">
-              {(
-                [
-                  { value: "female" as const, label: "Female" },
-                  { value: "male" as const, label: "Male" },
-                ] as const
-              ).map((opt) => {
-                const on = (form.demoModel ?? "female") === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => set("demoModel", opt.value)}
-                    className={cn(
-                      "rounded-[var(--radius-md)] border px-3 py-2.5 text-left transition",
-                      on
-                        ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
-                        : "border-[var(--color-border)] bg-[var(--color-surface)]",
-                    )}
-                  >
-                    <span className="block text-sm font-medium">{opt.label}</span>
-                    <span className="text-[11px] text-[var(--color-subtle)]">
-                      Form videos
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+            <CoachPresence
+              value={form.demoModel ?? "female"}
+              onChange={(v) => set("demoModel", v)}
+              trashTalk={form.coachTrashTalk}
+              onTrashTalkChange={(v) => set("coachTrashTalk", v)}
+            />
           </div>
 
           <div className="space-y-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
@@ -348,39 +327,6 @@ export function Onboarding() {
               <span>20s recover</span>
             </div>
           </div>
-
-
-          {form.demoModel === "female" && (
-            <button
-              type="button"
-              onClick={() => set("coachTrashTalk", !form.coachTrashTalk)}
-              className={cn(
-                "flex w-full items-start gap-3 rounded-[var(--radius-lg)] border px-3 py-3 text-left transition",
-                form.coachTrashTalk
-                  ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
-                  : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
-              )}
-            >
-              <span
-                className={cn(
-                  "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
-                  form.coachTrashTalk
-                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                    : "border-[var(--color-border-strong)]",
-                )}
-              >
-                {form.coachTrashTalk && <Check className="h-3 w-3" />}
-              </span>
-              <span>
-                <span className="block text-sm font-medium">
-                  Coach talks shit
-                </span>
-                <span className="text-xs text-[var(--color-muted)]">
-                  On-screen roasts mid-set. Female coach only.
-                </span>
-              </span>
-            </button>
-          )}
 
           {ownedCount > 0 && (
             <button

@@ -12,7 +12,7 @@ Session shape (every program):
 2. **Work circuit** — 6–8 moves in a row, repeat 2–3 rounds (mix of timed holds and reps)
 3. **Cooldown** (1 pass) — cobra stretch, prone T
 
-Gear-aware programs: bodyweight by default; barbell / plates / cable / pull-up bar / ab wheel / dumbbells / **resistance bands** / bench unlock extra moves (Pallof, woodchop, rollouts, hanging raises, etc.).
+Gear-aware programs: bodyweight by default; barbell / plates / cable / pull-up bar / ab wheel / dumbbells / **resistance bands** / bench unlock extra moves (Pallof, woodchop, rollouts, hanging raises, etc.). Turning a tool on toasts the moves it unlocks.
 
 ## What the user already signed off on
 
@@ -24,17 +24,18 @@ Gear-aware programs: bodyweight by default; barbell / plates / cable / pull-up b
 - Cross-body mountain climber **deleted**.
 - Side plank hip dip is **two exercises**: left and right.
 - Finish overlay + **confetti**; extra love for a **2-day streak**.
-- Trash talk: **female coach only**, on-screen lines like “keep going don’t be a pussy”. Speech synthesis was **removed** because it sounded like a digital dude. There are optional MP3s under `public/audio/coach/` — only use them if they actually sound like a hot English-accent woman. If they sound robotic/male, do not play them.
+- Trash talk: **female coach only**, **on-screen lines** (huge library: funny / mean-funny / mid-set bite / finish gloat / 2-day extra love). Voice is “keep going don’t be a pussy,” not corporate gym-bro. Speech synthesis was **removed**. **Do not play MP3s** — if they sound robotic or male they break the product. Text is the product.
 - Bird dog = true bird dog (quadruped, opposite arm + opposite leg), alternate sides, then loop. Ankle-reach on the back is **not** bird dog.
-- Penguin crunch (aka heel-touch / “penguins”) is a **separate** move: supine, knees bent, feet flat, reach side to side toward heels. If the demo is still wrong, **delete it** rather than ship a bad pose.
+- Penguin crunch is the heel-reach move: supine, knees bent, feet flat, reach side to side toward heels. **Heel-touch was deleted** as a duplicate of penguin.
 - Dead bug: supine, tabletop, **opposite** arm + opposite leg extend toward the floor, then switch. Not a sit-up, not a hollow rock.
-- Crunch: small spinal flexion only — **not** a sit-up. Long-arm crunch same idea, arms overhead, tiny lift.
+- Crunch: small spinal flexion only — **not** a sit-up.
 - Sit-up: starts on the floor and comes all the way up.
-- Flutter kick, reverse crunch, V-up, hollow rock, heel touch, plank shoulder tap, plank hip dip: form must match the written cues.
+- Flutter kick, reverse crunch, V-up, hollow hold, plank shoulder tap, plank hip dip: form must match the written cues.
+- Catalog stays tight. Dropped as duplicate / filler / posterior padding: heel-touch, scissors (near flutter), long-arm crunch, toe-touch crunch, swimmer (not in abs circuits). Prefer fewer correct moves.
 
-## Known form / media debt (fix these first if reviewing)
+## Known form / media debt
 
-Audited 2026-08-13. Penguin is a distinct heel-reach demo (no longer a copy of heel-touch). Dead bug, flutter kick, reverse crunch, V-up, plank shoulder tap, and plank hip dip were rebuilt so the *motion* matches the cues. Crunch ROM and hollow hold were verified as matching the written form. Male coach now covers the beginner circuit (incl. dead bug, penguin, prone T).
+Audited 2026-08-13. Penguin is a distinct heel-reach demo. Dead bug, flutter kick, reverse crunch, V-up, plank shoulder tap, and plank hip dip were rebuilt so the *motion* matches the cues. Crunch ROM and hollow hold were verified. Male coach covers the beginner circuit (incl. dead bug, penguin, prone T).
 
 Media lives in `public/exercises/{id}.jpg|.mp4` (female) and `public/exercises/male/` (male, incomplete beyond beginner — UI falls back to female on 404). Cache-bust with the `V` constant in `src/data/exercises.ts`.
 
@@ -46,6 +47,7 @@ Media lives in `public/exercises/{id}.jpg|.mp4` (female) and `public/exercises/m
 - Preview / sandbox: listen on `0.0.0.0:8080`. Own `/workspace/startup.sh` (idempotent).
 - Persist profile in Zustand (`src/store/fitness.ts`). `demoModel` and `coachTrashTalk` merge on rehydrate.
 - `resolveExerciseMedia()` switches male/female paths.
+- Workout player is cinema mode (no bottom nav). Coach lines overlay the demo. `src/lib/coach-audio.ts` is a no-op on purpose.
 - Do not re-scaffold. Edit in place. Leave the dev server running.
 
 ## How to continue

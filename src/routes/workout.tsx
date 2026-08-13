@@ -13,18 +13,10 @@ import {
 } from "lucide-react";
 import { getExercise, estimateExerciseCalories, type Exercise } from "@/data/exercises";
 import {
-  FINISH_LINES,
-  STREAK_LINES,
-  TRASH_TALK_LINES,
-  pickLine,
-  pickLineIndex,
+  pickCoachLine,
+  pickFinishLine,
+  type CoachLineKind,
 } from "@/data/coach-lines";
-import {
-  unlockCoachAudio,
-  playCoachLine,
-  preloadCoachAudio,
-  isCoachAudioUnlocked,
-} from "@/lib/coach-audio";
 import { ExerciseMedia } from "@/components/fitness/exercise-media";
 import { ConfettiBurst } from "@/components/fitness/confetti";
 import { Button } from "@/components/ui/button";
@@ -52,6 +44,7 @@ type CelebrateState = {
   skipped: number;
   headline: string;
   sub: string;
+  quote: string;
 };
 
 function WorkoutPage() {
@@ -81,9 +74,11 @@ function WorkoutPage() {
   const [workLeft, setWorkLeft] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
   const [coachLine, setCoachLine] = useState<string | null>(null);
+  const [goFlash, setGoFlash] = useState(false);
   const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
   const autoStarted = useRef<string | null>(null);
   const trashAt = useRef(0);
+  const skipLock = useRef(false);
   const completingTimed = useRef(false);
 
   const current = active?.exercises[active.currentExerciseIndex];
@@ -91,31 +86,30 @@ function WorkoutPage() {
   const circuitMode = active?.circuitMode ?? false;
   const isTimed =
     exercise?.unit === "time" || exercise?.unit === "hold" || false;
+  const phase = current?.phase ?? "work";
 
-  // Unlock + preload on first interaction so mid-set audio is never blocked.
-  useEffect(() => {
-    const unlock = () => {
-      unlockCoachAudio();
-      void preloadCoachAudio();
-    };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    window.addEventListener("touchstart", unlock, { once: true });
-    // Also unlock immediately if coach is already on and user navigated here via tap.
-    if (trashEnabled) unlock();
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-      window.removeEventListener("touchstart", unlock);
-    };
-  }, [trashEnabled]);
+  const remainingWork = useMemo(() => {
+    if (!active) return false;
+    return active.exercises
+      .slice(active.currentExerciseIndex + 1)
+      .some((e) => (e.phase ?? "work") === "work" && !e.skipped);
+  }, [active]);
+  const isLastWork = phase === "work" && !remainingWork;
 
-  useEffect(() => {
-    if (trashEnabled) {
-      unlockCoachAudio();
-      void preloadCoachAudio();
-    }
-  }, [trashEnabled]);
+  const fireTrashTalk = useCallback(
+    (kind: CoachLineKind = "work", opts?: { force?: boolean; holdMs?: number }) => {
+      if (!trashEnabled) return;
+      const now = Date.now();
+      if (!opts?.force && now - trashAt.current < 7_000) return;
+      trashAt.current = now;
+      const line = pickCoachLine(kind);
+      setCoachLine(line.text);
+      window.setTimeout(() => {
+        setCoachLine((cur) => (cur === line.text ? null : cur));
+      }, opts?.holdMs ?? 4200);
+    },
+    [trashEnabled],
+  );
 
   const progress = useMemo(() => {
     if (!active) return 0;
@@ -152,26 +146,6 @@ function WorkoutPage() {
     }, 0);
   }, [active, bodyKg]);
 
-  const fireTrashTalk = useCallback(
-    (force = false) => {
-      if (!trashEnabled) return;
-      const now = Date.now();
-      if (!force && now - trashAt.current < 12_000) return;
-      trashAt.current = now;
-      if (!isCoachAudioUnlocked()) {
-        unlockCoachAudio();
-      }
-      const idx = pickLineIndex(TRASH_TALK_LINES.length, now);
-      const line = TRASH_TALK_LINES[idx]!;
-      setCoachLine(line);
-      void playCoachLine(idx);
-      window.setTimeout(() => {
-        setCoachLine((cur) => (cur === line ? null : cur));
-      }, 4500);
-    },
-    [trashEnabled],
-  );
-
   useEffect(() => {
     if (!isTimed || !timerRunning || workLeft <= 0) return;
     const t = window.setInterval(() => {
@@ -189,12 +163,6 @@ function WorkoutPage() {
   }, [restLeft > 0]);
 
   useEffect(() => {
-    if (restLeft === Math.max(3, Math.floor(restPreference / 2))) {
-      fireTrashTalk();
-    }
-  }, [restLeft, restPreference, fireTrashTalk]);
-
-  useEffect(() => {
     setTipIndex(0);
     completingTimed.current = false;
     if (!exercise || !current || !active) return;
@@ -205,16 +173,43 @@ function WorkoutPage() {
       const sec = current.sets[0]?.seconds || exercise.defaultSeconds || 30;
       setWorkLeft(sec);
       setTimerRunning(true);
+      setGoFlash(true);
+      window.setTimeout(() => setGoFlash(false), 900);
     } else {
       setTimerRunning(false);
       setWorkLeft(0);
     }
   }, [exercise?.id, active?.currentExerciseIndex]);
 
+  useEffect(() => {
+    if (!trashEnabled || !exercise) return;
+    if (restLeft > 0) {
+      fireTrashTalk("rest", { force: true, holdMs: 3800 });
+      return;
+    }
+    if (phase !== "work") return;
+    if (skipLock.current) {
+      skipLock.current = false;
+    } else {
+      fireTrashTalk(isLastWork ? "last" : "work", { force: true, holdMs: 4800 });
+    }
+    const t = window.setInterval(() => fireTrashTalk("work"), 8000);
+    return () => window.clearInterval(t);
+  }, [
+    exercise?.id,
+    active?.currentExerciseIndex,
+    restLeft > 0,
+    trashEnabled,
+    phase,
+    isLastWork,
+    fireTrashTalk,
+  ]);
+
   const finishSession = useCallback(() => {
     const skipped = active?.exercises.filter((e) => e.skipped).length ?? 0;
     const result = finishWorkout();
     const streak = streakDaysFn();
+    const closer = pickFinishLine(streak);
     const twoDay = streak === 2;
     setCelebrate({
       calories: result?.totalCalories ?? liveCals,
@@ -222,14 +217,17 @@ function WorkoutPage() {
       skipped,
       headline: twoDay
         ? "Two days. That's a streak, not a fluke."
-        : pickLine(FINISH_LINES),
+        : streak >= 3
+          ? `${streak}-day heater.`
+          : "Session closed.",
       sub: twoDay
         ? "Come back tomorrow and it's real. Don't ghost me now."
         : streak > 2
-          ? pickLine(STREAK_LINES)
+          ? "Feed it tomorrow. Don't put a streak on a diet."
           : streak === 1
             ? "Day one in the books. Tomorrow makes it a streak."
             : "First session in the books.",
+      quote: closer.text,
     });
   }, [active, finishWorkout, streakDaysFn, liveCals]);
 
@@ -243,7 +241,6 @@ function WorkoutPage() {
         : (current.sets[0]?.seconds ?? 0),
     });
     const outcome = completeCurrentMove();
-    fireTrashTalk(true);
     if (!outcome || !outcome.advanced) {
       finishSession();
       return;
@@ -258,12 +255,10 @@ function WorkoutPage() {
     isTimed,
     updateActiveSet,
     completeCurrentMove,
-    fireTrashTalk,
     finishSession,
     restPreference,
   ]);
 
-  // Auto-complete timed move when timer hits 0
   useEffect(() => {
     if (!isTimed || !timerRunning || workLeft > 0) return;
     if (completingTimed.current) return;
@@ -287,7 +282,6 @@ function WorkoutPage() {
     );
   }
 
-  const phase = current.phase ?? "work";
   const headerSub = (() => {
     if (phase === "warmup") return "Warm-up";
     if (phase === "cooldown") return "Cooldown";
@@ -300,9 +294,9 @@ function WorkoutPage() {
   const targetReps = current.sets[0]?.reps ?? exercise.defaultReps;
   const nextSlot = active.exercises[active.currentExerciseIndex + 1];
   const nextExercise = nextSlot ? getExercise(nextSlot.exerciseId) : undefined;
+  const urgent = isTimed && timerRunning && workLeft > 0 && workLeft <= 5;
 
   const handleSkip = () => {
-    unlockCoachAudio();
     const name = exercise.name;
     skipExercise(active.currentExerciseIndex);
     setRestLeft(0);
@@ -310,14 +304,8 @@ function WorkoutPage() {
     toast.message(`Skipped ${name}`, {
       description: "Move on — you can finish without it.",
     });
-    if (trashEnabled) {
-      const line = TRASH_TALK_LINES[11]!;
-      setCoachLine(line);
-      void playCoachLine(11);
-      window.setTimeout(() => {
-        setCoachLine((cur) => (cur === line ? null : cur));
-      }, 4500);
-    }
+    skipLock.current = true;
+    fireTrashTalk("skip", { force: true, holdMs: 4500 });
     const after = useFitnessStore.getState().active;
     if (
       after &&
@@ -339,7 +327,6 @@ function WorkoutPage() {
 
   const handleDone = () => {
     if (current.skipped || restLeft > 0) return;
-    unlockCoachAudio();
     setTimerRunning(false);
     advanceAfterMove();
   };
@@ -356,40 +343,52 @@ function WorkoutPage() {
   if (celebrate) {
     const twoDay = celebrate.streak === 2;
     return (
-      <div className="relative mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center gap-5 p-6 text-center">
-        <ConfettiBurst active durationMs={twoDay ? 5200 : 2800} />
-        <PartyPopper className="h-10 w-10 text-[var(--color-primary)]" />
+      <div className="relative mx-auto flex min-h-[80dvh] max-w-lg flex-col items-center justify-center gap-5 overflow-hidden p-6 text-center">
+        <ConfettiBurst
+          active
+          durationMs={twoDay ? 6400 : 3600}
+          count={twoDay ? 220 : 160}
+        />
+        <PartyPopper className="h-12 w-12 text-[var(--color-primary)] drop-shadow-[0_0_18px_color-mix(in_oklab,var(--color-primary)_55%,transparent)]" />
         {twoDay && (
           <p className="rounded-full border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-primary)]">
-            2-day streak
+            2-day streak · extra love
           </p>
         )}
-        <h1 className="font-display text-3xl font-bold tracking-tight">
+        {celebrate.streak >= 3 && (
+          <p className="rounded-full border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-primary)]">
+            {celebrate.streak}-day heater
+          </p>
+        )}
+        <h1 className="font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl">
           {celebrate.headline}
         </h1>
-        <p className="text-sm text-[var(--color-muted)]">{celebrate.sub}</p>
+        <p className="max-w-sm text-sm text-[var(--color-muted)]">{celebrate.sub}</p>
+        <p className="max-w-sm rounded-[var(--radius-xl)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-4 py-3 font-display text-lg font-semibold text-[var(--color-primary)]">
+          “{celebrate.quote}”
+        </p>
         <div className="grid w-full grid-cols-3 gap-3">
           <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
             <p className="text-xs text-[var(--color-subtle)]">Calories</p>
-            <p className="text-xl font-semibold tabular">{celebrate.calories}</p>
+            <p className="text-2xl font-semibold tabular">{celebrate.calories}</p>
           </div>
           <div
             className={cn(
               "rounded-[var(--radius-lg)] border bg-[var(--color-surface)] p-3",
-              twoDay
+              twoDay || celebrate.streak >= 3
                 ? "border-[var(--color-primary)]/50"
                 : "border-[var(--color-border)]",
             )}
           >
             <p className="text-xs text-[var(--color-subtle)]">Streak</p>
-            <p className="text-xl font-semibold tabular">{celebrate.streak}d</p>
+            <p className="text-2xl font-semibold tabular">{celebrate.streak}d</p>
           </div>
           <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
             <p className="text-xs text-[var(--color-subtle)]">Skipped</p>
-            <p className="text-xl font-semibold tabular">{celebrate.skipped}</p>
+            <p className="text-2xl font-semibold tabular">{celebrate.skipped}</p>
           </div>
         </div>
-        <Button className="w-full" onClick={() => navigate({ to: "/" })}>
+        <Button className="w-full" size="lg" onClick={() => navigate({ to: "/" })}>
           Back home
         </Button>
       </div>
@@ -397,7 +396,14 @@ function WorkoutPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-col gap-4 p-4 pb-28">
+    <div
+      className={cn(
+        "mx-auto flex w-full max-w-lg flex-col gap-3 p-3 pb-6",
+        phase === "warmup" && "workout-phase-warmup",
+        phase === "work" && "workout-phase-work",
+        phase === "cooldown" && "workout-phase-cool",
+      )}
+    >
       <div className="flex items-center justify-between gap-2">
         <Button
           variant="ghost"
@@ -411,7 +417,14 @@ function WorkoutPage() {
           Exit
         </Button>
         <div className="text-center">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--color-subtle)]">
+          <p
+            className={cn(
+              "text-[11px] font-semibold uppercase tracking-wide",
+              phase === "warmup" && "text-[var(--color-warn)]",
+              phase === "work" && "text-[var(--color-primary)]",
+              phase === "cooldown" && "text-[var(--color-success)]",
+            )}
+          >
             {headerSub}
           </p>
           <p className="text-sm font-semibold">{exercise.name}</p>
@@ -425,20 +438,44 @@ function WorkoutPage() {
 
       <Progress value={progress} className="h-1.5" />
 
-      <ExerciseMedia exercise={exercise} className="max-h-[46vh]" />
-
-      {coachLine && (
-        <div className="rounded-[var(--radius-lg)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-3 py-2.5 text-sm font-medium text-[var(--color-primary)]">
-          {coachLine}
-        </div>
-      )}
+      <ExerciseMedia
+        exercise={exercise}
+        className="max-h-[42vh]"
+        compact
+        overlay={
+          <>
+            {goFlash && restLeft <= 0 && (
+              <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+                <span className="go-stamp font-display text-7xl font-black tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.65)]">
+                  GO
+                </span>
+              </div>
+            )}
+            {coachLine && (
+              <div className="pointer-events-none absolute inset-x-3 top-12 z-10 sm:top-14">
+                <p className="coach-line-pop rounded-[var(--radius-lg)] border border-[var(--color-primary)]/45 bg-black/70 px-3 py-2.5 text-center font-display text-base font-semibold leading-snug text-white shadow-[0_8px_30px_rgba(0,0,0,0.45)] backdrop-blur-sm sm:text-lg">
+                  {coachLine}
+                </p>
+              </div>
+            )}
+          </>
+        }
+      />
 
       {restLeft > 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-6 text-center">
           <p className="text-xs font-semibold uppercase tracking-wide text-[var(--color-subtle)]">
             {restKind === "round" ? "Round rest" : "Rest"}
           </p>
-          <p className="font-display text-5xl font-bold tabular">{restLeft}s</p>
+          <p className="font-display text-6xl font-bold tabular tracking-tight">
+            {restLeft}
+            <span className="text-3xl text-[var(--color-muted)]">s</span>
+          </p>
+          {nextExercise && (
+            <p className="text-sm text-[var(--color-muted)]">
+              Up next · <span className="font-semibold text-foreground">{nextExercise.name}</span>
+            </p>
+          )}
           <div className="flex flex-wrap justify-center gap-2">
             {REST_PRESETS.map((s) => (
               <Button
@@ -454,13 +491,7 @@ function WorkoutPage() {
               </Button>
             ))}
           </div>
-          <Button
-            className="w-full"
-            onClick={() => {
-              unlockCoachAudio();
-              setRestLeft(0);
-            }}
-          >
+          <Button className="w-full" onClick={() => setRestLeft(0)}>
             Skip rest
           </Button>
         </div>
@@ -468,15 +499,20 @@ function WorkoutPage() {
         <div className="space-y-3">
           {isTimed ? (
             <div className="flex flex-col items-center gap-3 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
-              <p className="font-display text-5xl font-bold tabular">{workLeft}s</p>
+              <p
+                className={cn(
+                  "font-display text-6xl font-bold tabular tracking-tight",
+                  urgent && "timer-urgent",
+                )}
+              >
+                {workLeft}
+                <span className="text-3xl text-[var(--color-muted)]">s</span>
+              </p>
               <div className="flex w-full gap-2">
                 <Button
                   variant="secondary"
                   className="flex-1"
-                  onClick={() => {
-                    unlockCoachAudio();
-                    setTimerRunning((r) => !r);
-                  }}
+                  onClick={() => setTimerRunning((r) => !r)}
                 >
                   {timerRunning ? (
                     <>
@@ -495,12 +531,14 @@ function WorkoutPage() {
             </div>
           ) : (
             <div className="flex flex-col gap-3 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-5">
+              <p className="text-center font-display text-4xl font-bold tabular">
+                {targetReps}
+                <span className="ml-1 text-lg font-semibold text-[var(--color-muted)]">
+                  reps
+                </span>
+              </p>
               <p className="text-center text-sm text-[var(--color-muted)]">
-                Target{" "}
-                <span className="font-semibold text-foreground tabular">
-                  {targetReps}
-                </span>{" "}
-                reps · finish the set then tap Done
+                Finish the set, then tap Done
               </p>
               <Button size="lg" className="w-full" onClick={handleDone}>
                 Done
@@ -542,7 +580,9 @@ function WorkoutPage() {
         <p className="text-center text-xs text-[var(--color-subtle)]">
           {nextExercise
             ? `Next · ${nextExercise.name}`
-            : "Last move · finish strong"}
+            : isLastWork
+              ? "Last move · leave something ugly on the floor"
+              : "Last move · finish strong"}
         </p>
       )}
 

@@ -856,7 +856,7 @@ export const exercises: Exercise[] = [
 		id: "penguin-crunch",
 		name: "Penguin Crunch",
 		shortName: "Penguin",
-		description: "Also called heel touches or ankle taps — lying side-to-side oblique pulses. Reach each heel without sitting up.",
+		description: "Lying side-to-side oblique pulses. Knees bent, feet flat — reach each heel without sitting up.",
 		howTo: [
 			"Lie flat on your back, knees bent, feet flat on the floor — shoulders mostly stay on the ground.",
 			"Brace lightly, then slide your left hand down toward your left heel while the left shoulder shifts slightly left along the floor.",
@@ -885,76 +885,6 @@ export const exercises: Exercise[] = [
 			"Reach right heel",
 			"Reach left heel",
 			"Stay low"
-		]
-	},
-	{
-		id: "heel-touch",
-		name: "Heel Touch",
-		shortName: "Heel Touch",
-		description: "Same family as the penguin crunch — side-to-side heel reaches lying down. Prefer Penguin Crunch in circuits.",
-		howTo: [
-			"Lie flat on your back, knees bent, feet flat, shoulders mostly on the ground.",
-			"Slide right hand to right heel, then left hand to left heel — shoulders shift slightly along the floor with each reach.",
-			"Keep the upper back low; this is a side-reach, not a sit-up.",
-			"Pulse with control, not momentum."
-		],
-		tips: [
-			"Shoulders mostly stay on the mat while you twist to each heel.",
-			"Reach for heels by shortening the side abs.",
-			"Don’t sit up — this is a lying side-reach."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "beginner",
-		focus: ["obliques", "upper abs"],
-		met: 3.2,
-		unit: "reps",
-		defaultSets: 1,
-		defaultReps: 24,
-		defaultSeconds: 0,
-		restSeconds: 10,
-		weighted: false,
-		popularRank: 21,
-		...media("heel-touch"),
-		cues: [
-			"Lie down",
-			"Touch right heel",
-			"Touch left heel",
-			"Stay braced"
-		]
-	},
-	{
-		id: "toe-touch",
-		name: "Toe Touch Crunch",
-		shortName: "Toe Touch",
-		description: "Legs vertical, reach hands to toes — pure upper-ab short-range crunch.",
-		howTo: [
-			"Lie on back with legs straight up toward the ceiling (or slightly bent).",
-			"Reach both hands up and actually touch your toes, curling shoulders off the floor.",
-			"Lower shoulders with control; keep legs tall.",
-			"Exhale on each reach — fingertips should meet the toes every rep."
-		],
-		tips: [
-			"Legs stay vertical; only the torso crunches.",
-			"Actually touch the toes each rep.",
-			"Soft knees if hamstrings are tight."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "beginner",
-		focus: ["upper abs"],
-		met: 3.3,
-		unit: "reps",
-		defaultSets: 1,
-		defaultReps: 15,
-		defaultSeconds: 0,
-		restSeconds: 10,
-		weighted: false,
-		popularRank: 22,
-		...media("toe-touch"),
-		cues: [
-			"Legs up",
-			"Touch toes",
-			"Squeeze",
-			"Lower soft"
 		]
 	},
 	{
@@ -1032,41 +962,6 @@ export const exercises: Exercise[] = [
 		]
 	},
 	{
-		id: "scissors",
-		name: "Scissor Kicks",
-		shortName: "Scissors",
-		description: "Alternating long-leg crosses hovering off the floor — lower abs + hip flexors.",
-		howTo: [
-			"Lie on back, hands under glutes, shoulders optional lift.",
-			"Raise both legs a few inches.",
-			"Cross one leg over the other in a scissor pattern, alternating.",
-			"Keep low back pressed into the floor."
-		],
-		tips: [
-			"Long legs, small controlled crosses.",
-			"If low back arches, raise legs higher.",
-			"Shoulders can stay down if neck fatigues."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "intermediate",
-		focus: ["lower abs", "hip flexors"],
-		met: 4,
-		unit: "time",
-		defaultSets: 1,
-		defaultReps: 1,
-		defaultSeconds: 35,
-		restSeconds: 12,
-		weighted: false,
-		popularRank: 25,
-		...media("scissors"),
-		cues: [
-			"Hover legs",
-			"Cross over",
-			"Switch",
-			"Low back down"
-		]
-	},
-	{
 		id: "sit-up",
 		name: "Sit-Up",
 		shortName: "Sit-Up",
@@ -1099,41 +994,6 @@ export const exercises: Exercise[] = [
 			"Curl up",
 			"Sit tall",
 			"Lower slow"
-		]
-	},
-	{
-		id: "long-arm-crunch",
-		name: "Long-Arm Crunch",
-		shortName: "Long Arm",
-		description: "Crunch with arms extended overhead — longer lever, harder upper abs. Small range only — not a sit-up.",
-		howTo: [
-			"Lie flat with knees bent, arms straight overhead by ears on the floor.",
-			"Crunch only the shoulders a few inches up while keeping arms long by the ears.",
-			"Pause at the top, then lower back to the floor with control.",
-			"Do not sit all the way up — this is a short crunch, not a sit-up."
-		],
-		tips: [
-			"Arms stay glued by the ears the whole rep.",
-			"Small range is correct — quality over height.",
-			"Exhale on the crunch."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "beginner",
-		focus: ["upper abs"],
-		met: 3.4,
-		unit: "reps",
-		defaultSets: 1,
-		defaultReps: 14,
-		defaultSeconds: 0,
-		restSeconds: 10,
-		weighted: false,
-		popularRank: 27,
-		...media("long-arm-crunch"),
-		cues: [
-			"Arms long",
-			"Small crunch",
-			"Hold",
-			"Lower"
 		]
 	},
 	{
@@ -1356,45 +1216,6 @@ export const exercises: Exercise[] = [
 			"Dip hip",
 			"Drive up",
 			"Long line"
-		]
-	},
-	{
-		id: "swimmer",
-		name: "Swimmer",
-		shortName: "Swimmer",
-		description: "Prone alternating arm/leg lifts — balances all the crunch work with posterior chain and anti-extension control.",
-		howTo: [
-			"Lie face down, arms extended overhead, legs long.",
-			"Lift right arm and left leg a few inches, then switch: left arm + right leg.",
-			"Keep forehead toward the mat; don’t crank the neck.",
-			"Flutter in a smooth swimming rhythm — small range, continuous."
-		],
-		tips: [
-			"Long body, small lifts — not a huge arch.",
-			"Opposite limbs move together.",
-			"Exhale steady; squeeze glutes lightly."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "beginner",
-		focus: [
-			"posterior",
-			"full core",
-			"transverse"
-		],
-		met: 3.5,
-		unit: "time",
-		defaultSets: 1,
-		defaultReps: 1,
-		defaultSeconds: 35,
-		restSeconds: 12,
-		weighted: false,
-		popularRank: 34,
-		...media("swimmer"),
-		cues: [
-			"Face down",
-			"Opposite lift",
-			"Switch",
-			"Long body"
 		]
 	},
 	{

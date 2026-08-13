@@ -24,7 +24,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "20 effective ab exercises, calendar tracking, and calorie estimates.",
+          "Follow-along abs circuits with honest form demos, a female coach who talks shit, and gear unlocks.",
       },
       { name: "theme-color", content: "#0a0b0c" },
     ],

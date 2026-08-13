@@ -32,7 +32,7 @@ export interface UserProfile {
   onboarded: boolean;
   /** Demo coach in exercise media */
   demoModel: "female" | "male";
-  /** Female coach trash-talks mid-workout (on-screen lines; optional MP3s) */
+  /** Female coach trash-talks mid-workout (on-screen lines only — never TTS / MP3). */
   coachTrashTalk: boolean;
 }
 
@@ -616,12 +616,32 @@ export const useFitnessStore = create<FitnessState>()(
             })),
           };
         }
+        if (active) {
+          const kept = active.exercises.filter((ex) => getExercise(ex.exerciseId));
+          active = kept.length
+            ? {
+                ...active,
+                exercises: kept,
+                currentExerciseIndex: Math.min(
+                  active.currentExerciseIndex,
+                  kept.length - 1,
+                ),
+              }
+            : null;
+        }
+        const customIds = (p.customIds ?? current.customIds).filter((id) =>
+          getExercise(id),
+        );
+        const favorites = (p.favorites ?? current.favorites).filter((id) =>
+          getExercise(id),
+        );
         return {
           ...current,
           ...p,
           profile,
           active,
-          customIds: p.customIds ?? current.customIds,
+          customIds,
+          favorites,
         };
       },
     },

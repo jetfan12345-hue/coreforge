@@ -124,7 +124,7 @@ export const programs: Program[] = [
       "plank-hip-dip",
       "tuck-up",
       "flutter-kick",
-      "swimmer",
+      "bicycle-crunch",
     ],
   },
 ];
@@ -165,11 +165,11 @@ export const beginnerMonthWeeks: {
     label: "Longer density",
     exerciseIds: [
       "bird-dog",
-      "long-arm-crunch",
+      "sit-up",
       "leg-raise",
       "penguin-crunch",
       "side-plank",
-      "swimmer",
+      "reverse-crunch",
       "plank",
     ],
   },
@@ -213,10 +213,10 @@ export const intermediateMonthWeeks: {
     exerciseIds: [
       "dead-bug",
       "leg-raise",
-      "scissors",
+      "reverse-crunch",
       "tuck-up",
       "side-crunch",
-      "swimmer",
+      "bicycle-crunch",
       "flutter-kick",
     ],
   },
@@ -242,8 +242,7 @@ export const intermediateMonthWeeks: {
       "windshield-wiper",
       "v-up",
       "plank-hip-dip",
-      "scissors",
-      "swimmer",
+      "bicycle-crunch",
       "flutter-kick",
     ],
   },
@@ -385,7 +384,7 @@ export function buildSessionSlots(
   const week = opts.week ?? currentProgramWeek();
   const work =
     programId === "custom"
-      ? [...(opts.customIds ?? [])]
+      ? [...(opts.customIds ?? [])].filter((id) => getExercise(id))
       : resolveProgramExercises(programId, opts);
   if (!work.length) return [];
 
@@ -580,6 +579,19 @@ export function alternativesFor(
     })
     .map((e) => e.id)
     .slice(0, 8);
+}
+
+export function describeGearUnlock(key: keyof GearKit): {
+  title: string;
+  moves: string[];
+} {
+  const opt = GEAR_OPTIONS.find((g) => g.key === key);
+  const moves = advancedGearBlocks
+    .filter((b) => b.needs.includes(key))
+    .flatMap((b) => b.exerciseIds)
+    .map((id) => getExercise(id)?.name)
+    .filter((n): n is string => Boolean(n));
+  return { title: opt?.label ?? String(key), moves };
 }
 
 export function equipmentLabel(eq: Equipment): string {

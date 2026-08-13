@@ -22,6 +22,7 @@ import {
   intermediateMonthWeeks,
   programs,
   currentProgramWeek,
+  describeGearUnlock,
   resolveProgramExercises,
   sessionCalories,
   sessionSummary,
@@ -34,6 +35,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFitnessStore, dateKey } from "@/store/fitness";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { pickCoachLine } from "@/data/coach-lines";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -260,7 +263,18 @@ function HomePage() {
               <button
                 key={key}
                 type="button"
-                onClick={() => toggleGear(key)}
+                onClick={() => {
+                  const nextOn = !gear?.[key];
+                  toggleGear(key);
+                  if (nextOn) {
+                    const { title, moves } = describeGearUnlock(key);
+                    toast.success(`${title} unlocked`, {
+                      description: moves.length
+                        ? `Advanced can add ${moves.join(" · ")}`
+                        : "Logged. Advanced can layer this as overload.",
+                    });
+                  }
+                }}
                 className={cn(
                   "rounded-[var(--radius-md)] border px-2.5 py-2 text-left transition",
                   on
@@ -380,25 +394,52 @@ function HomePage() {
                 Follow-along circuit · mix of timed & rep moves · auto warm-up & stretch
               </p>
             </div>
-            <div className="flex shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-0.5">
-              {(["female", "male"] as const).map((m) => {
-                const on = (profile.demoModel ?? "female") === m;
-                return (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setProfile({ demoModel: m })}
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize transition",
-                      on
-                        ? "bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                        : "text-[var(--color-muted)]",
-                    )}
-                  >
-                    {m === "female" ? "Female" : "Male"}
-                  </button>
-                );
-              })}
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <div className="flex overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)]">
+                {(["female", "male"] as const).map((m) => {
+                  const on = (profile.demoModel ?? "female") === m;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setProfile({ demoModel: m })}
+                      className={cn(
+                        "flex items-center gap-1.5 px-1.5 py-1 text-[11px] font-semibold transition",
+                        on
+                          ? "bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
+                          : "text-[var(--color-muted)]",
+                      )}
+                    >
+                      <img
+                        src={heroImage(m)}
+                        alt=""
+                        className="h-6 w-6 rounded-full object-cover object-[center_18%]"
+                      />
+                      {m === "female" ? "Female" : "Male"}
+                    </button>
+                  );
+                })}
+              </div>
+              {(profile.demoModel ?? "female") === "female" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = !profile.coachTrashTalk;
+                    setProfile({ coachTrashTalk: next });
+                    toast.message(next ? "Coach on" : "Coach off", {
+                      description: next ? pickCoachLine("work").text : undefined,
+                    });
+                  }}
+                  className={cn(
+                    "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                    profile.coachTrashTalk
+                      ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
+                      : "text-[var(--color-subtle)]",
+                  )}
+                >
+                  {profile.coachTrashTalk ? "Trash talk on" : "Trash talk off"}
+                </button>
+              )}
             </div>
           </div>
         </div>

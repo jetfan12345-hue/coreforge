@@ -6,9 +6,9 @@ import {
   estimateBmr,
   kgFromProfile,
 } from "@/data/exercises";
-import { GEAR_OPTIONS } from "@/data/programs";
-import { TRASH_TALK_LINES } from "@/data/coach-lines";
-import { playCoachSample, unlockCoachAudio } from "@/lib/coach-audio";
+import { describeGearUnlock, GEAR_OPTIONS } from "@/data/programs";
+import { pickCoachLine } from "@/data/coach-lines";
+import { CoachPresence } from "@/components/fitness/coach-presence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,7 +72,18 @@ function ProfilePage() {
               <button
                 key={g.key}
                 type="button"
-                onClick={() => toggleGear(g.key)}
+                onClick={() => {
+                  const nextOn = !profile.gear?.[g.key];
+                  toggleGear(g.key);
+                  const { title, moves } = describeGearUnlock(g.key);
+                  if (nextOn) {
+                    toast.success(`${title} unlocked`, {
+                      description: moves.length
+                        ? `Advanced can add ${moves.join(" · ")}`
+                        : "Logged. Advanced can layer this as overload.",
+                    });
+                  }
+                }}
                 className={cn(
                   "rounded-[var(--radius-lg)] border px-3 py-2.5 text-left text-sm transition",
                   on
@@ -117,98 +128,37 @@ function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-[var(--color-muted)]">
-            Demo videos show proper form. Male covers the beginner circuit;
-            Female has the full library.
+            Who shows form. Male covers the beginner circuit; Female has the
+            full library.
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                { value: "female" as const, label: "Female" },
-                { value: "male" as const, label: "Male" },
-              ] as const
-            ).map((opt) => {
-              const on = (profile.demoModel ?? "female") === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setProfile({ demoModel: opt.value })}
-                  className={cn(
-                    "rounded-[var(--radius-lg)] border px-3 py-2.5 text-left text-sm font-medium transition",
-                    on
-                      ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
-                      : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
-                  )}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-
-          {(profile.demoModel ?? "female") === "female" ? (
-            <>
-              <button
+          <CoachPresence
+            value={profile.demoModel ?? "female"}
+            onChange={(v) => setProfile({ demoModel: v })}
+            trashTalk={profile.coachTrashTalk}
+            onTrashTalkChange={(next) => {
+              setProfile({ coachTrashTalk: next });
+              if (next) {
+                toast.message("Coach on", {
+                  description: pickCoachLine("work").text,
+                });
+              } else {
+                toast.message("Coach off");
+              }
+            }}
+          />
+          {(profile.demoModel ?? "female") === "female" &&
+            profile.coachTrashTalk && (
+              <Button
                 type="button"
+                variant="secondary"
+                className="w-full"
                 onClick={() => {
-                  const next = !profile.coachTrashTalk;
-                  setProfile({ coachTrashTalk: next });
-                  if (next) {
-                    unlockCoachAudio();
-                    playCoachSample();
-                    toast.message("Coach on", {
-                      description: TRASH_TALK_LINES[0],
-                    });
-                  } else {
-                    toast.message("Coach off");
-                  }
+                  toast.message(pickCoachLine("work").text);
                 }}
-                className={cn(
-                  "flex w-full items-start gap-3 rounded-[var(--radius-lg)] border px-3 py-3 text-left text-sm transition",
-                  profile.coachTrashTalk
-                    ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
-                    : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
-                )}
               >
-                <span
-                  className={cn(
-                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
-                    profile.coachTrashTalk
-                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                      : "border-[var(--color-border-strong)]",
-                  )}
-                >
-                  {profile.coachTrashTalk && <Check className="h-3 w-3" />}
-                </span>
-                <span>
-                  <span className="font-medium">Coach talks shit</span>
-                  <span className="mt-0.5 block text-xs text-[var(--color-muted)]">
-                    On-screen lines mid-set — female coach only. Optional
-                    voice clips play if they load.
-                  </span>
-                </span>
-              </button>
-
-              {profile.coachTrashTalk && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => {
-                    unlockCoachAudio();
-                    playCoachSample();
-                    toast.message(TRASH_TALK_LINES[0]);
-                  }}
-                >
-                  Preview a line
-                </Button>
-              )}
-            </>
-          ) : (
-            <p className="text-xs text-[var(--color-muted)]">
-              Trash talk is the female coach only. Flip to Female to turn it on.
-            </p>
-          )}
+                Another line
+              </Button>
+            )}
         </CardContent>
       </Card>
 

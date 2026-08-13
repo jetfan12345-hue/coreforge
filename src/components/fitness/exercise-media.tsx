@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pause, Play, RotateCcw, Volume2, ListChecks } from "lucide-react";
 import type { Exercise } from "@/data/exercises";
 import { resolveExerciseMedia } from "@/data/exercises";
@@ -11,10 +11,14 @@ export function ExerciseMedia({
   exercise,
   className,
   autoPlay = true,
+  compact = false,
+  overlay,
 }: {
   exercise: Exercise;
   className?: string;
   autoPlay?: boolean;
+  compact?: boolean;
+  overlay?: ReactNode;
 }) {
   const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "female");
   const media = useMemo(
@@ -114,6 +118,7 @@ export function ExerciseMedia({
           )}
 
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15" />
+          {overlay}
 
           <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-2">
             <span className="rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-white/90 backdrop-blur-sm">
@@ -182,7 +187,7 @@ export function ExerciseMedia({
         </div>
       </div>
 
-      {tips.length > 0 && (
+      {!compact && tips.length > 0 && (
         <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <div className="mb-2.5 flex items-center gap-2">
             <ListChecks className="h-4 w-4 text-[var(--color-primary)]" />
