@@ -30,6 +30,40 @@ await page.waitForTimeout(300);
 await page.getByRole("button", { name: /^get to it$/i }).click();
 await page.waitForTimeout(900);
 await page.screenshot({ path: "/workspace/screenshots/home-after-get-to-it.png" });
+const startBox = await page.getByRole("button", { name: /start circuit/i }).boundingBox();
+if (!startBox || startBox.y + startBox.height > 760) {
+  console.error("Start circuit is below the fold", startBox);
+  process.exit(1);
+}
+const homeText = await page.locator("body").innerText();
+const homeBad = [
+  /Your gear/i,
+  /Rest between moves/i,
+  /Trash talk/i,
+  /Coach talks shit/i,
+  /Advanced forge/i,
+  /Pure bodyweight forge/i,
+  /don't be a pussy/i,
+].filter((re) => re.test(homeText));
+if (homeBad.length) {
+  console.error("home still has roast/config wall", homeBad.map(String), homeText.slice(0, 600));
+  process.exit(1);
+}
+if (!/Start circuit/i.test(homeText) || !/Month 1/i.test(homeText)) {
+  console.error("home missing Start / Month 1", homeText.slice(0, 400));
+  process.exit(1);
+}
+
+await page.getByRole("navigation").getByRole("link", { name: /^you$/i }).click();
+await page.waitForTimeout(500);
+await page.screenshot({ path: "/workspace/screenshots/profile-you.png" });
+const youText = await page.locator("body").innerText();
+if (!/Coach talks shit/i.test(youText) || !/Off by default/i.test(youText)) {
+  console.error("profile missing optional trash-talk toggle", youText.slice(0, 500));
+  process.exit(1);
+}
+await page.getByRole("navigation").getByRole("link", { name: /^home$/i }).click();
+await page.waitForTimeout(400);
 
 await page.getByRole("button", { name: /start circuit/i }).click();
 await page.waitForTimeout(2500);

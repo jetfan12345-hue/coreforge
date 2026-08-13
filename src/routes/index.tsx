@@ -2,8 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   Check,
-  Clock,
-  Flame,
   Play,
   Sparkles,
 } from "lucide-react";
@@ -29,7 +27,6 @@ import {
   type ProgramId,
 } from "@/data/programs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StatsRow } from "@/components/fitness/stats-row";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFitnessStore, dateKey } from "@/store/fitness";
@@ -204,69 +201,13 @@ function HomePage() {
         <p className="text-sm text-[var(--color-muted)]">
           {profile.name ? `Hey ${profile.name}` : "Hey there"}
           <span className="text-[var(--color-subtle)]">
-            {streak > 0 ? ` · ${streak}-day streak` : " · tap Start to train"}
+            {streak > 0 ? ` · ${streak}-day streak` : " · pick a level and start"}
           </span>
         </p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
           Train your core
         </h1>
-        <p className="mt-2 max-w-md text-sm text-[var(--color-muted)]">
-          Warm-up, six core moves × {rounds} rounds, then stretch. Follow the
-          demo. Skip anytime.
-        </p>
       </section>
-
-      <StatsRow
-        items={[
-          { label: "Today", value: `${stats.todayCals} cal`, icon: "flame" },
-          { label: "This week", value: `${stats.weekCals}`, icon: "trend" },
-          { label: "Streak", value: `${streak}d`, icon: "calendar" },
-          { label: "Sessions", value: String(stats.sessions), icon: "dumbbell" },
-        ]}
-      />
-
-      <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-sm font-medium">This week</p>
-          <p className="text-xs tabular text-[var(--color-muted)]">
-            {stats.daysHit}/{weekGoal} days
-          </p>
-        </div>
-        <div className="mb-3 grid grid-cols-7 gap-1.5">
-          {weekStrip.map((d) => (
-            <div key={d.key} className="flex flex-col items-center gap-1">
-              <span className="text-[10px] uppercase text-[var(--color-subtle)]">
-                {d.label}
-              </span>
-              <span
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold tabular",
-                  d.hit
-                    ? "bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                    : d.isToday
-                      ? "border border-[var(--color-primary)]/50 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "bg-[var(--color-surface-2)] text-[var(--color-subtle)]",
-                )}
-              >
-                {d.hit ? "✓" : d.isToday ? "·" : ""}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
-          <div
-            className="h-full rounded-full bg-[var(--color-primary)] transition-all"
-            style={{ width: `${weekProgress}%` }}
-          />
-        </div>
-        <p className="mt-2 text-[11px] text-[var(--color-subtle)]">
-          Program week {weekNum} of 4
-          {weekMeta ? ` · ${weekMeta.label}` : ""}
-          {stats.daysHit >= weekGoal
-            ? " · goal hit"
-            : ` · ${weekGoal - stats.daysHit} more day${weekGoal - stats.daysHit === 1 ? "" : "s"} to goal`}
-        </p>
-      </div>
 
       {active && (
         <Button asChild className="w-full" size="lg">
@@ -277,13 +218,13 @@ function HomePage() {
         </Button>
       )}
 
-      <section className="space-y-4">
+      <section className="space-y-3">
         <div>
           <h2 className="font-display text-lg font-semibold tracking-tight">
             Today’s session
           </h2>
           <p className="text-xs text-[var(--color-muted)]">
-            Pick a level. Hit Start. Gear and coach live in You.
+            Month 1 · Month 2 · Advanced. Extra settings live in You.
           </p>
         </div>
 
@@ -309,53 +250,27 @@ function HomePage() {
         </Tabs>
 
         <div className="overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="relative h-40 w-full sm:h-48">
+          <div className="flex items-center gap-3 border-b border-[var(--color-border)] p-3">
             <img
               src={heroImage(profile.demoModel ?? "female")}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover object-[center_20%]"
+              className="h-14 w-14 shrink-0 rounded-[var(--radius-md)] object-cover object-[center_18%]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-[var(--color-surface)]/45 to-transparent" />
-            <div className="absolute bottom-3 left-4 right-4">
-              <div className="mb-1 flex flex-wrap gap-1.5">
-                <Badge className="border-0 bg-black/45 capitalize text-white">
-                  {levelLabel}
-                </Badge>
-                {weekMeta && (
-                  <Badge className="border-0 bg-black/45 text-white">
-                    Wk {weekNum} · {weekMeta.label}
-                  </Badge>
-                )}
-                <Badge className="border-0 bg-black/45 text-white">
-                  {rounds} rounds
-                </Badge>
-                <Badge className="border-0 bg-black/45 text-white">
-                  <Clock className="mr-1 h-3 w-3" />~{estMin} min
-                </Badge>
-                <Badge className="border-0 bg-black/45 text-white">
-                  <Flame className="mr-1 h-3 w-3" />~{estCals} cal
-                </Badge>
-              </div>
-              <h3 className="font-display text-xl font-semibold tracking-tight">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-display text-lg font-semibold tracking-tight">
                 {tab === "custom"
                   ? "Your custom circuit"
                   : activeProgram?.name}
               </h3>
-              <p className="mt-0.5 text-xs text-white/80">
+              <p className="text-xs text-[var(--color-muted)]">
                 {tab === "custom"
                   ? "Build your own — optional"
-                  : activeProgram?.tagline}
+                  : `${weekMeta ? `Wk ${weekNum} · ${weekMeta.label}` : levelLabel} · ${rounds} rounds · ~${estMin} min · ~${estCals} cal`}
               </p>
             </div>
           </div>
 
-          <div className="space-y-4 p-4 sm:p-5">
-            {tab !== "custom" && (
-              <p className="text-sm text-[var(--color-muted)]">
-                {weekMeta?.trains ?? activeProgram?.description}
-              </p>
-            )}
-
+          <div className="space-y-3 p-4 sm:p-5">
             <Button
               className="h-14 w-full text-base font-semibold"
               size="lg"
@@ -366,6 +281,11 @@ function HomePage() {
               Start circuit
               <ArrowRight className="h-5 w-5" />
             </Button>
+            {tab !== "custom" && (
+              <p className="text-sm text-[var(--color-muted)]">
+                {weekMeta?.trains ?? activeProgram?.description}
+              </p>
+            )}
             {!slots.length && tab === "custom" && (
               <p className="text-center text-xs text-[var(--color-muted)]">
                 Pick at least one move for your circuit.
@@ -514,7 +434,7 @@ function HomePage() {
             )}
 
             <p className="text-center text-[11px] text-[var(--color-subtle)]">
-              Rest, gear, Male/Female, and trash talk live in{" "}
+              Rest, gear, and coach settings live in{" "}
               <Link to="/profile" className="underline underline-offset-2">
                 You
               </Link>
@@ -523,6 +443,58 @@ function HomePage() {
           </div>
         </div>
       </section>
+
+      <StatsRow
+        items={[
+          { label: "Today", value: `${stats.todayCals} cal`, icon: "flame" },
+          { label: "This week", value: `${stats.weekCals}`, icon: "trend" },
+          { label: "Streak", value: `${streak}d`, icon: "calendar" },
+          { label: "Sessions", value: String(stats.sessions), icon: "dumbbell" },
+        ]}
+      />
+
+      <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">This week</p>
+          <p className="text-xs tabular text-[var(--color-muted)]">
+            {stats.daysHit}/{weekGoal} days
+          </p>
+        </div>
+        <div className="mb-3 grid grid-cols-7 gap-1.5">
+          {weekStrip.map((d) => (
+            <div key={d.key} className="flex flex-col items-center gap-1">
+              <span className="text-[10px] uppercase text-[var(--color-subtle)]">
+                {d.label}
+              </span>
+              <span
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold tabular",
+                  d.hit
+                    ? "bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
+                    : d.isToday
+                      ? "border border-[var(--color-primary)]/50 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                      : "bg-[var(--color-surface-2)] text-[var(--color-subtle)]",
+                )}
+              >
+                {d.hit ? "✓" : d.isToday ? "·" : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+          <div
+            className="h-full rounded-full bg-[var(--color-primary)] transition-all"
+            style={{ width: `${weekProgress}%` }}
+          />
+        </div>
+        <p className="mt-2 text-[11px] text-[var(--color-subtle)]">
+          Program week {weekNum} of 4
+          {weekMeta ? ` · ${weekMeta.label}` : ""}
+          {stats.daysHit >= weekGoal
+            ? " · goal hit"
+            : ` · ${weekGoal - stats.daysHit} more day${weekGoal - stats.daysHit === 1 ? "" : "s"} to goal`}
+        </p>
+      </div>
 
       <section className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="mb-2 flex items-center gap-2">
