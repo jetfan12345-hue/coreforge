@@ -14,6 +14,7 @@ import {
 import { getExercise, estimateExerciseCalories, type Exercise } from "@/data/exercises";
 import {
   pickCoachLine,
+  pickCleanFinish,
   pickFinishLine,
   type CoachLineKind,
 } from "@/data/coach-lines";
@@ -209,28 +210,38 @@ function WorkoutPage() {
     const skipped = active?.exercises.filter((e) => e.skipped).length ?? 0;
     const result = finishWorkout();
     const streak = streakDaysFn();
-    const closer = pickFinishLine(streak);
     const twoDay = streak === 2;
     toast.dismiss();
-    setCelebrate({
-      calories: result?.totalCalories ?? liveCals,
-      streak,
-      skipped,
-      headline: twoDay
-        ? "Two days. That's a streak, not a fluke."
-        : streak >= 3
-          ? `${streak}-day heater.`
-          : "Session closed.",
-      sub: twoDay
-        ? "Come back tomorrow and it's real. Don't ghost me now."
-        : streak > 2
-          ? "Feed it tomorrow. Don't put a streak on a diet."
-          : streak === 1
-            ? "Day one in the books. Tomorrow makes it a streak."
-            : "First session in the books.",
-      quote: closer.text,
-    });
-  }, [active, finishWorkout, streakDaysFn, liveCals]);
+    if (trashEnabled) {
+      const closer = pickFinishLine(streak);
+      setCelebrate({
+        calories: result?.totalCalories ?? liveCals,
+        streak,
+        skipped,
+        headline: twoDay
+          ? "Two days. That's a streak, not a fluke."
+          : streak >= 3
+            ? `${streak}-day heater.`
+            : "Session closed.",
+        sub: twoDay
+          ? "Come back tomorrow and it's real. Don't ghost me now."
+          : streak > 2
+            ? "Feed it tomorrow. Don't put a streak on a diet."
+            : streak === 1
+              ? "Day one in the books. Tomorrow makes it a streak."
+              : "First session in the books.",
+        quote: closer.text,
+      });
+    } else {
+      const clean = pickCleanFinish(streak);
+      setCelebrate({
+        calories: result?.totalCalories ?? liveCals,
+        streak,
+        skipped,
+        ...clean,
+      });
+    }
+  }, [active, finishWorkout, streakDaysFn, liveCals, trashEnabled]);
 
   const advanceAfterMove = useCallback(() => {
     if (!active || !current || !exercise) return;
@@ -291,9 +302,9 @@ function WorkoutPage() {
             2-day streak · extra love
           </p>
         )}
-        {celebrate.streak >= 3 && (
+          {celebrate.streak >= 3 && (
           <p className="rounded-full border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-primary)]">
-            {celebrate.streak}-day heater
+            {celebrate.streak}-day streak
           </p>
         )}
         <h1 className="font-display text-4xl font-bold tracking-tight text-balance sm:text-5xl">

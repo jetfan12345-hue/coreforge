@@ -3,26 +3,26 @@ import {
   ArrowRight,
   Check,
   Clock,
-  Dumbbell,
   Flame,
   Play,
   Sparkles,
-  Target,
-  Zap,
 } from "lucide-react";
-import { exercises, getExercise, heroImage, resolveExerciseMedia, type Equipment } from "@/data/exercises";
+import {
+  exercises,
+  getExercise,
+  heroImage,
+  resolveExerciseMedia,
+  type Equipment,
+} from "@/data/exercises";
 
 import {
-  advancedGearBlocks,
   beginnerMonthWeeks,
   buildSessionSlots,
   circuitRounds,
   estimateSessionDurationMin,
-  GEAR_OPTIONS,
   intermediateMonthWeeks,
   programs,
   currentProgramWeek,
-  describeGearUnlock,
   resolveProgramExercises,
   sessionCalories,
   sessionSummary,
@@ -35,8 +35,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFitnessStore, dateKey } from "@/store/fitness";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { pickCoachLine } from "@/data/coach-lines";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -52,8 +50,6 @@ type CustomGearFilter =
   | "ab wheel"
   | "band"
   | "dumbbell";
-
-const REST_PRESETS = [5, 10, 15, 20] as const;
 
 const GEAR_FILTERS: { value: CustomGearFilter; label: string }[] = [
   { value: "bodyweight", label: "No gear" },
@@ -73,10 +69,7 @@ function HomePage() {
   const history = useFitnessStore((s) => s.history);
   const customIds = useFitnessStore((s) => s.customIds);
   const toggleCustom = useFitnessStore((s) => s.toggleCustom);
-  const toggleGear = useFitnessStore((s) => s.toggleGear);
-  const setProfile = useFitnessStore((s) => s.setProfile);
   const startSession = useFitnessStore((s) => s.startSession);
-  const setRestSeconds = useFitnessStore((s) => s.setRestSeconds);
   const bodyKg = useFitnessStore((s) => s.bodyWeightKg());
   const active = useFitnessStore((s) => s.active);
   const streak = useFitnessStore((s) => s.streakDays());
@@ -126,7 +119,6 @@ function HomePage() {
   const weekNum = currentProgramWeek(profile.programStartedAt);
   const weekGoal = 4;
   const weekProgress = Math.min(100, Math.round((stats.daysHit / weekGoal) * 100));
-  const ownedGear = GEAR_OPTIONS.filter((g) => gear?.[g.key]);
 
   const activeProgram = programs.find((p) => p.id === tab);
 
@@ -189,16 +181,6 @@ function HomePage() {
     );
   }, [customGear]);
 
-  const bodyCount = exercises.filter(
-    (e) =>
-      e.equipment.every((eq) => eq === "bodyweight") &&
-      !e.weighted &&
-      (!e.role || e.role === "work"),
-  ).length;
-  const gearCount = exercises.filter(
-    (e) => e.weighted || e.equipment.some((eq) => eq !== "bodyweight"),
-  ).length;
-
   const launch = () => {
     if (!slots.length) return;
     startSession(slots, {
@@ -207,7 +189,14 @@ function HomePage() {
     void navigate({ to: "/workout" });
   };
 
-  const displayIds = workIds;
+  const levelLabel =
+    tab === "beginner"
+      ? "Month 1"
+      : tab === "intermediate"
+        ? "Month 2"
+        : tab === "advanced"
+          ? "Advanced"
+          : "Custom";
 
   return (
     <div className="space-y-6">
@@ -215,15 +204,15 @@ function HomePage() {
         <p className="text-sm text-[var(--color-muted)]">
           {profile.name ? `Hey ${profile.name}` : "Hey there"}
           <span className="text-[var(--color-subtle)]">
-            {streak > 0 ? ` · ${streak}-day streak` : " · pick a level & train"}
+            {streak > 0 ? ` · ${streak}-day streak` : " · tap Start to train"}
           </span>
         </p>
         <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
           Train your core
         </h1>
         <p className="mt-2 max-w-md text-sm text-[var(--color-muted)]">
-          Warm-up → {summary.workPerRound || 6}–8 move circuit × rounds → cooldown
-          stretches. Skip or swap any move.
+          Warm-up, six core moves × {rounds} rounds, then stretch. Follow the
+          demo. Skip anytime.
         </p>
       </section>
 
@@ -238,102 +227,7 @@ function HomePage() {
 
       <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Dumbbell className="h-4 w-4 text-[var(--color-primary)]" />
-            <p className="text-sm font-medium">Your gear</p>
-          </div>
-          <p className="text-xs text-[var(--color-muted)]">
-            {ownedGear.length === 0
-              ? "Floor only · advanced still works"
-              : `${ownedGear.length} owned`}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          {GEAR_OPTIONS.map(({ key, label, hint }) => {
-            const on = Boolean(gear?.[key]);
-            const unlocks = advancedGearBlocks.find((b) =>
-              b.needs.includes(key),
-            );
-            const unlockNames = (unlocks?.exerciseIds ?? [])
-              .map((id) => getExercise(id)?.shortName)
-              .filter(Boolean)
-              .slice(0, 2)
-              .join(" · ");
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => {
-                  const nextOn = !gear?.[key];
-                  toggleGear(key);
-                  if (nextOn) {
-                    const { title, moves } = describeGearUnlock(key);
-                    toast.success(`${title} unlocked`, {
-                      description: moves.length
-                        ? `Advanced can add ${moves.join(" · ")}`
-                        : "Logged. Advanced can layer this as overload.",
-                    });
-                  }
-                }}
-                className={cn(
-                  "rounded-[var(--radius-md)] border px-2.5 py-2 text-left transition",
-                  on
-                    ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15"
-                    : "border-[var(--color-border)] hover:border-[var(--color-border-strong)]",
-                )}
-              >
-                <p
-                  className={cn(
-                    "text-[11px] font-semibold",
-                    on
-                      ? "text-[var(--color-primary)]"
-                      : "text-[var(--color-fg)]",
-                  )}
-                >
-                  {on ? "✓ " : ""}
-                  {label}
-                </p>
-                <p className="text-[10px] text-[var(--color-subtle)]">
-                  {on && unlockNames ? `Unlocks ${unlockNames}` : hint}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-        {ownedGear.length > 0 && (
-          <button
-            type="button"
-            onClick={() =>
-              setProfile({ includeGearOverload: !profile.includeGearOverload })
-            }
-            className={cn(
-              "mt-3 flex w-full items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs transition",
-              profile.includeGearOverload
-                ? "border-[var(--color-primary)]/30 bg-[var(--color-primary)]/8 text-[var(--color-primary)]"
-                : "border-[var(--color-border)] text-[var(--color-muted)]",
-            )}
-          >
-            <span
-              className={cn(
-                "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                profile.includeGearOverload
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                  : "border-[var(--color-border-strong)]",
-              )}
-            >
-              {profile.includeGearOverload && <Check className="h-2.5 w-2.5" />}
-            </span>
-            Layer owned gear as Advanced overload (bodyweight circuit first)
-          </button>
-        )}
-      </div>
-
-      <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-[var(--color-primary)]" />
-            <p className="text-sm font-medium">This week</p>
-          </div>
+          <p className="text-sm font-medium">This week</p>
           <p className="text-xs tabular text-[var(--color-muted)]">
             {stats.daysHit}/{weekGoal} days
           </p>
@@ -385,63 +279,12 @@ function HomePage() {
 
       <section className="space-y-4">
         <div>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="font-display text-lg font-semibold tracking-tight">
-                Today’s session
-              </h2>
-              <p className="text-xs text-[var(--color-muted)]">
-                Follow-along circuit · mix of timed & rep moves · auto warm-up & stretch
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-1">
-              <div className="flex overflow-hidden rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)]">
-                {(["female", "male"] as const).map((m) => {
-                  const on = (profile.demoModel ?? "female") === m;
-                  return (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setProfile({ demoModel: m })}
-                      className={cn(
-                        "flex items-center gap-1.5 px-1.5 py-1 text-[11px] font-semibold transition",
-                        on
-                          ? "bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                          : "text-[var(--color-muted)]",
-                      )}
-                    >
-                      <img
-                        src={heroImage(m)}
-                        alt=""
-                        className="h-6 w-6 rounded-full object-cover object-[center_18%]"
-                      />
-                      {m === "female" ? "Female" : "Male"}
-                    </button>
-                  );
-                })}
-              </div>
-              {(profile.demoModel ?? "female") === "female" && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !profile.coachTrashTalk;
-                    setProfile({ coachTrashTalk: next });
-                    toast.message(next ? "Coach on" : "Coach off", {
-                      description: next ? pickCoachLine("work").text : undefined,
-                    });
-                  }}
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-[10px] font-semibold",
-                    profile.coachTrashTalk
-                      ? "bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                      : "text-[var(--color-subtle)]",
-                  )}
-                >
-                  {profile.coachTrashTalk ? "Trash talk on" : "Trash talk off"}
-                </button>
-              )}
-            </div>
-          </div>
+          <h2 className="font-display text-lg font-semibold tracking-tight">
+            Today’s session
+          </h2>
+          <p className="text-xs text-[var(--color-muted)]">
+            Pick a level. Hit Start. Gear and coach live in You.
+          </p>
         </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as ProgramId)}>
@@ -466,7 +309,7 @@ function HomePage() {
         </Tabs>
 
         <div className="overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="relative h-44 w-full sm:h-52">
+          <div className="relative h-40 w-full sm:h-48">
             <img
               src={heroImage(profile.demoModel ?? "female")}
               alt=""
@@ -476,11 +319,7 @@ function HomePage() {
             <div className="absolute bottom-3 left-4 right-4">
               <div className="mb-1 flex flex-wrap gap-1.5">
                 <Badge className="border-0 bg-black/45 capitalize text-white">
-                  {tab === "beginner"
-                    ? "Month 1"
-                    : tab === "intermediate"
-                      ? "Month 2"
-                      : tab}
+                  {levelLabel}
                 </Badge>
                 {weekMeta && (
                   <Badge className="border-0 bg-black/45 text-white">
@@ -504,16 +343,32 @@ function HomePage() {
               </h3>
               <p className="mt-0.5 text-xs text-white/80">
                 {tab === "custom"
-                  ? `${bodyCount} floor · ${gearCount} with gear — mix freely`
+                  ? "Build your own — optional"
                   : activeProgram?.tagline}
               </p>
             </div>
           </div>
 
           <div className="space-y-4 p-4 sm:p-5">
-            {tab !== "custom" && activeProgram && (
+            {tab !== "custom" && (
               <p className="text-sm text-[var(--color-muted)]">
-                {activeProgram.description}
+                {weekMeta?.trains ?? activeProgram?.description}
+              </p>
+            )}
+
+            <Button
+              className="h-14 w-full text-base font-semibold"
+              size="lg"
+              disabled={!slots.length}
+              onClick={launch}
+            >
+              <Play className="h-5 w-5" />
+              Start circuit
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+            {!slots.length && tab === "custom" && (
+              <p className="text-center text-xs text-[var(--color-muted)]">
+                Pick at least one move for your circuit.
               </p>
             )}
 
@@ -529,7 +384,7 @@ function HomePage() {
                   Circuit
                 </p>
                 <p className="font-display text-sm font-semibold text-[var(--color-primary)]">
-                  {summary.workPerRound} × {rounds}
+                  {summary.workPerRound || 6} × {rounds}
                 </p>
               </div>
               <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-2">
@@ -538,58 +393,6 @@ function HomePage() {
                 </p>
                 <p className="font-display text-sm font-semibold">2 stretches</p>
               </div>
-            </div>
-
-            {tab === "advanced" && (
-              <p className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-muted)]">
-                Pure bodyweight forge
-                {profile.includeGearOverload && ownedGear.length
-                  ? ` + optional ${ownedGear.map((g) => g.label.toLowerCase()).join(", ")} overload`
-                  : " — no gym required"}
-                .
-              </p>
-            )}
-
-            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-[var(--color-subtle)]">
-                  <Zap className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-                  Rest between moves
-                </span>
-                <span className="font-display text-sm font-semibold tabular text-[var(--color-primary)]">
-                  {rest}s
-                </span>
-              </div>
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {REST_PRESETS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setRestSeconds(s)}
-                    className={cn(
-                      "min-w-[3rem] rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular transition",
-                      rest === s
-                        ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                        : "border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-border-strong)]",
-                    )}
-                  >
-                    {s}s
-                  </button>
-                ))}
-              </div>
-              <input
-                type="range"
-                min={5}
-                max={20}
-                step={1}
-                value={rest}
-                onChange={(e) => setRestSeconds(Number(e.target.value))}
-                className="w-full accent-[var(--color-primary)]"
-                aria-label="Rest seconds"
-              />
-              <p className="mt-1.5 text-[11px] text-[var(--color-subtle)]">
-                30s rest between full circuit rounds · stretches always finish the session
-              </p>
             </div>
 
             {tab === "custom" && (
@@ -662,7 +465,7 @@ function HomePage() {
                 <li className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
                   Work circuit (×{rounds})
                 </li>
-                {displayIds.map((id, i) => {
+                {workIds.map((id, i) => {
                   const ex = getExercise(id);
                   if (!ex) return null;
                   const thumb = resolveExerciseMedia(
@@ -710,21 +513,13 @@ function HomePage() {
               </ol>
             )}
 
-            <Button
-              className="w-full"
-              size="lg"
-              disabled={!slots.length}
-              onClick={launch}
-            >
-              <Play className="h-4 w-4" />
-              Start circuit
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            {!slots.length && tab === "custom" && (
-              <p className="text-center text-xs text-[var(--color-muted)]">
-                Pick at least one move for your circuit.
-              </p>
-            )}
+            <p className="text-center text-[11px] text-[var(--color-subtle)]">
+              Rest, gear, Male/Female, and trash talk live in{" "}
+              <Link to="/profile" className="underline underline-offset-2">
+                You
+              </Link>
+              .
+            </p>
           </div>
         </div>
       </section>
@@ -736,8 +531,8 @@ function HomePage() {
         </div>
         <ul className="space-y-1.5 text-xs text-[var(--color-muted)]">
           <li>· Warm-up (jacks + climbers) raises heart rate before floor work</li>
-          <li>· 6–8 core moves in a row, then the whole circuit repeats</li>
-          <li>· Timed holds and rep moves mixed — follow the demo video</li>
+          <li>· Six core moves in a row, then the whole circuit repeats</li>
+          <li>· Timer and Skip sit under the demo — next move is labeled</li>
           <li>· Cooldown stretches open the abs and hips when you’re done</li>
         </ul>
       </section>

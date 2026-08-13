@@ -129,3 +129,37 @@ export function pickFinishLine(streak: number): CoachLine {
   if (streak >= 3) return pickCoachLine("streakHot");
   return pickCoachLine("finish");
 }
+
+/** Professional finish copy when trash talk is off. */
+export function pickCleanFinish(streak: number): {
+  headline: string;
+  sub: string;
+  quote: string;
+} {
+  if (streak === 2) {
+    return {
+      headline: "Two-day streak",
+      sub: "Come back tomorrow and it starts to stick.",
+      quote: "Nice work. See you tomorrow.",
+    };
+  }
+  if (streak >= 3) {
+    return {
+      headline: `${streak}-day streak`,
+      sub: "Keep showing up. That’s the whole program.",
+      quote: "Session complete.",
+    };
+  }
+  if (streak === 1) {
+    return {
+      headline: "Session complete",
+      sub: "Day one is in the books. Tomorrow makes it a streak.",
+      quote: "Nice work.",
+    };
+  }
+  return {
+    headline: "Session complete",
+    sub: "First session in the books.",
+    quote: "Nice work.",
+  };
+}

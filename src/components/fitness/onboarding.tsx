@@ -31,6 +31,8 @@ export function Onboarding() {
     gear: { ...EMPTY_GEAR, ...(existing.gear ?? {}) },
     restSeconds: existing.restSeconds ?? 10,
     includeGearOverload: existing.includeGearOverload ?? true,
+    demoModel: existing.demoModel ?? "female",
+    coachTrashTalk: existing.coachTrashTalk ?? false,
     onboarded: false,
   });
 
@@ -47,7 +49,7 @@ export function Onboarding() {
   const ownedCount = GEAR_OPTIONS.filter((g) => form.gear?.[g.key]).length;
   const coach = form.demoModel ?? existing.demoModel ?? "female";
 
-  const finish = (opts: { floor: boolean }) => {
+  const finish = (opts: { floor: boolean; quick?: boolean }) => {
     complete({
       name: form.name.trim() || existing.name.trim() || "Athlete",
       age: form.age || 30,
@@ -59,8 +61,12 @@ export function Onboarding() {
       restSeconds: rest,
       gear: opts.floor ? { ...EMPTY_GEAR } : form.gear,
       includeGearOverload: opts.floor ? true : form.includeGearOverload,
-      demoModel: form.demoModel ?? existing.demoModel ?? "female",
-      coachTrashTalk: form.coachTrashTalk ?? existing.coachTrashTalk ?? false,
+      demoModel: opts.quick
+        ? "female"
+        : (form.demoModel ?? existing.demoModel ?? "female"),
+      coachTrashTalk: opts.quick
+        ? false
+        : Boolean(form.coachTrashTalk),
       programStartedAt: new Date().toISOString().slice(0, 10),
     });
   };
@@ -80,7 +86,7 @@ export function Onboarding() {
               CoreForge
             </p>
             <h1 className="font-display text-4xl font-semibold tracking-tight text-white text-balance">
-              Abs. Six minutes. Let’s go.
+              Abs. Follow along. Let’s go.
             </h1>
             <p className="mt-2 text-sm text-white/70">
               Warm-up, a short floor circuit, stretch. Follow the demo.
@@ -91,7 +97,7 @@ export function Onboarding() {
         <Button
           size="lg"
           className="h-14 w-full text-base font-semibold"
-          onClick={() => finish({ floor: true })}
+          onClick={() => finish({ floor: true, quick: true })}
         >
           Get to it
           <ArrowRight className="h-5 w-5" />

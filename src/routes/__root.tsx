@@ -25,7 +25,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Follow-along abs circuits with honest form demos, a female coach who talks shit, and gear unlocks.",
+          "Follow-along abs workouts with full-body form demos. Open the app, start a circuit, and follow along.",
       },
       { name: "theme-color", content: "#0a0b0c" },
     ],

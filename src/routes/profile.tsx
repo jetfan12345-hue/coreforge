@@ -129,7 +129,7 @@ function ProfilePage() {
         <CardContent className="space-y-3">
           <p className="text-xs text-[var(--color-muted)]">
             Who shows form. Male covers the beginner circuit; Female has the
-            full library.
+            full library. Trash talk is off unless you turn it on here.
           </p>
           <CoachPresence
             value={profile.demoModel ?? "female"}

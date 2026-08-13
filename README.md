@@ -1,6 +1,6 @@
 # CoreForge
 
-Circuit-style core training app: warmup → 6–8 work moves × rounds → cooldown stretches. Male or female demo coach, timed + rep moves, gear-aware programs, finish confetti, optional trash-talk coach.
+Circuit-style core training app: warmup → 6 work moves × rounds → cooldown stretches. Male or female demo coach, timed + rep moves, gear-aware Advanced overload, finish confetti, optional trash-talk coach (off by default).
 
 ## Stack
 

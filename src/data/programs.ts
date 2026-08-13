@@ -68,182 +68,194 @@ export const COOLDOWN_IDS = [
 export const ROUND_REST_SECONDS = 30;
 
 /**
- * Science-informed core order inside the work circuit:
- * brace → flex → lower → rotate → dynamic / posterior
- * Session shape: warmup → circuit × rounds → cooldown
+ * Balanced floor core — 6 work moves, not a crunch pile.
+ * Each circuit covers:
+ *  1. Anti-extension / brace (dead bug, plank, hollow)
+ *  2. Flexion / rectus (crunch OR sit-up — never both)
+ *  3. Lower abs / PPT (reverse crunch — not stacked with flutter / leg raise)
+ *  4. Rotation or anti-rotation (one primary: bicycle, bird-dog, or shoulder tap)
+ *  5. Lateral / obliques (ONE slot: side plank, penguin, or alternating hip dip)
+ * Warmup already has mountain climbers — do not stack leg raise + flutter + v-up.
+ * Session shape: warmup → circuit × 2–3 rounds → cooldown
  */
 export const programs: Program[] = [
   {
     id: "beginner",
-    name: "Beginner core",
-    tagline: "Month 1 · circuits · builds weekly",
+    name: "Month 1",
+    tagline: "About 10–15 min · 6 floor moves",
     description:
-      "Warm-up, 6–7 floor moves in a row for 2–3 rounds, then stretch. Zero gear required.",
-    durationMin: 14,
+      "Warm-up, six balanced core moves, then stretch. Two rounds at first, three later. No gear.",
+    durationMin: 12,
     bodyweightOnly: true,
     exerciseIds: [
       "dead-bug",
       "crunch",
+      "reverse-crunch",
       "bird-dog",
       "penguin-crunch",
-      "leg-raise",
       "plank",
     ],
   },
   {
     id: "intermediate",
-    name: "Intermediate burn",
-    tagline: "Month 2 · denser circuits",
+    name: "Month 2",
+    tagline: "About 15–20 min · denser 6",
     description:
-      "Same follow-along format, harder work block: hollow, V-ups, reverse crunch, dips, flutters.",
+      "Same follow-along shape. Hollow, sit-up, reverse crunch, rotation, one oblique move, plank.",
     durationMin: 18,
     bodyweightOnly: true,
     exerciseIds: [
       "hollow-hold",
-      "bicycle-crunch",
+      "crunch",
       "reverse-crunch",
-      "side-plank-hip-dip-left",
-      "side-plank-hip-dip-right",
-      "v-up",
-      "flutter-kick",
+      "bicycle-crunch",
+      "plank-hip-dip",
+      "plank",
     ],
   },
   {
     id: "advanced",
-    name: "Advanced forge",
-    tagline: "Hard bodyweight · gear optional",
+    name: "Advanced",
+    tagline: "Hard bodyweight · gear optional in You",
     description:
-      "Elite floor circuit first. Own a bar, wheel, plates, cable, or bands? Optional overload tacked on.",
-    durationMin: 22,
+      "Hollow brace, dragon flag, reverse crunch, windshield wiper, hip dips, shoulder taps. Tools in You add overload.",
+    durationMin: 18,
     bodyweightOnly: true,
     exerciseIds: [
       "hollow-hold",
       "dragon-flag",
+      "reverse-crunch",
       "windshield-wiper",
-      "v-up",
       "plank-hip-dip",
-      "tuck-up",
-      "flutter-kick",
-      "bicycle-crunch",
+      "plank-shoulder-tap",
     ],
   },
 ];
 
-/** Progressive month 1 — 4 weekly work circuits (6–7 moves). */
-export const beginnerMonthWeeks: {
+export type WeekCircuit = {
   week: number;
   label: string;
+  /** Product language: what this session trains */
+  trains: string;
   exerciseIds: string[];
-}[] = [
+};
+
+/** Month 1 — 4 weekly work circuits (always 6 moves). */
+export const beginnerMonthWeeks: WeekCircuit[] = [
   {
     week: 1,
     label: "Foundations",
+    trains:
+      "Dead bug brace, crunch, reverse crunch, bird dog, heel reach, plank",
     exerciseIds: [
       "dead-bug",
       "crunch",
+      "reverse-crunch",
       "bird-dog",
       "penguin-crunch",
-      "leg-raise",
       "plank",
     ],
   },
   {
     week: 2,
     label: "Add rotation",
+    trains:
+      "Dead bug, crunch, reverse crunch, bicycle, side plank, plank",
     exerciseIds: [
       "dead-bug",
       "crunch",
-      "russian-twist",
       "reverse-crunch",
+      "bicycle-crunch",
       "side-plank",
-      "plank-shoulder-tap",
-      "flutter-kick",
+      "plank",
     ],
   },
   {
     week: 3,
     label: "Longer density",
+    trains:
+      "Hollow, sit-up, reverse crunch, shoulder taps, side plank, plank",
     exerciseIds: [
-      "bird-dog",
+      "hollow-hold",
       "sit-up",
-      "leg-raise",
-      "penguin-crunch",
-      "side-plank",
       "reverse-crunch",
+      "plank-shoulder-tap",
+      "side-plank",
       "plank",
     ],
   },
   {
     week: 4,
-    label: "Bridge to mid",
+    label: "Bridge to Month 2",
+    trains:
+      "Hollow, sit-up, reverse crunch, bicycle, side plank, plank",
     exerciseIds: [
-      "dead-bug",
-      "bicycle-crunch",
-      "reverse-crunch",
-      "russian-twist",
-      "side-plank",
-      "flutter-kick",
       "hollow-hold",
+      "sit-up",
+      "reverse-crunch",
+      "bicycle-crunch",
+      "side-plank",
+      "plank",
     ],
   },
 ];
 
-/** Month 2 intermediate work circuits */
-export const intermediateMonthWeeks: {
-  week: number;
-  label: string;
-  exerciseIds: string[];
-}[] = [
+/** Month 2 — 4 weekly work circuits (always 6 moves, 3 rounds). */
+export const intermediateMonthWeeks: WeekCircuit[] = [
   {
     week: 1,
     label: "Density",
+    trains:
+      "Hollow, crunch, reverse crunch, bicycle, alternating hip dips, plank",
     exerciseIds: [
       "hollow-hold",
-      "bicycle-crunch",
+      "crunch",
       "reverse-crunch",
-      "side-plank-hip-dip-left",
-      "side-plank-hip-dip-right",
-      "v-up",
-      "flutter-kick",
+      "bicycle-crunch",
+      "plank-hip-dip",
+      "plank",
     ],
   },
   {
     week: 2,
-    label: "Lower emphasis",
+    label: "Brace + sit-up",
+    trains:
+      "Dead bug, sit-up, reverse crunch, bicycle, side plank, hollow",
     exerciseIds: [
       "dead-bug",
-      "leg-raise",
+      "sit-up",
       "reverse-crunch",
-      "tuck-up",
-      "side-crunch",
       "bicycle-crunch",
-      "flutter-kick",
+      "side-plank",
+      "hollow-hold",
     ],
   },
   {
     week: 3,
-    label: "Full ROM",
+    label: "Full control",
+    trains:
+      "Hollow, sit-up, reverse crunch, shoulder taps, hip dips, plank",
     exerciseIds: [
       "hollow-hold",
       "sit-up",
-      "v-up",
-      "russian-twist",
+      "reverse-crunch",
       "plank-shoulder-tap",
-      "side-plank",
-      "bicycle-crunch",
+      "plank-hip-dip",
+      "plank",
     ],
   },
   {
     week: 4,
-    label: "Forge prep",
+    label: "Peak week",
+    trains:
+      "Hollow, sit-up, reverse crunch, windshield wiper, hip dips, plank",
     exerciseIds: [
       "hollow-hold",
-      "tuck-up",
+      "sit-up",
+      "reverse-crunch",
       "windshield-wiper",
-      "v-up",
       "plank-hip-dip",
-      "bicycle-crunch",
-      "flutter-kick",
+      "plank",
     ],
   },
 ];

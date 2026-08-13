@@ -98,7 +98,7 @@ export function CoachPresence({
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-medium">Coach talks shit</span>
             <span className="block text-xs text-[var(--color-muted)]">
-              On-screen lines mid-set. Female only. No robot voice.
+              Optional. Off by default. On-screen lines mid-set. Female only.
             </span>
             {trashTalk && (
               <span className="mt-2 block rounded-md border border-[var(--color-primary)]/25 bg-black/25 px-2.5 py-1.5 font-display text-sm font-semibold text-[var(--color-primary)]">
