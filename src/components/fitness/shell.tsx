@@ -14,7 +14,8 @@ const nav = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const active = useFitnessStore((s) => s.active);
-  const cinema = pathname === "/workout";
+  const onboarded = useFitnessStore((s) => s.profile.onboarded);
+  const cinema = pathname === "/workout" || !onboarded;
 
   return (
     <div className="mesh-bg min-h-dvh">

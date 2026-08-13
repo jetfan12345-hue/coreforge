@@ -211,6 +211,7 @@ function WorkoutPage() {
     const streak = streakDaysFn();
     const closer = pickFinishLine(streak);
     const twoDay = streak === 2;
+    toast.dismiss();
     setCelebrate({
       calories: result?.totalCalories ?? liveCals,
       streak,
@@ -275,72 +276,6 @@ function WorkoutPage() {
       .filter((e): e is Exercise => Boolean(e));
   }, [exercise?.id, getAlternatives]);
 
-  if (!active || !current || !exercise) {
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
-        <p className="text-lg font-semibold text-foreground">No active workout</p>
-        <p className="text-sm text-muted-foreground">
-          Start a session from Home to train.
-        </p>
-        <Button asChild>
-          <Link to="/">Back home</Link>
-        </Button>
-      </div>
-    );
-  }
-
-  const headerSub = (() => {
-    if (phase === "warmup") return "Warm-up";
-    if (phase === "cooldown") return "Cooldown";
-    if (current.totalRounds && current.round) {
-      return `Round ${current.round} of ${current.totalRounds} · Move ${(current.circuitIndex ?? 0) + 1}/${current.circuitLength ?? "?"}`;
-    }
-    return `Move ${active.currentExerciseIndex + 1} of ${active.exercises.length}`;
-  })();
-
-  const targetReps = current.sets[0]?.reps ?? exercise.defaultReps;
-  const nextSlot = active.exercises[active.currentExerciseIndex + 1];
-  const nextExercise = nextSlot ? getExercise(nextSlot.exerciseId) : undefined;
-  const urgent = isTimed && timerRunning && workLeft > 0 && workLeft <= 5;
-
-  const handleSkip = () => {
-    const name = exercise.name;
-    skipExercise(active.currentExerciseIndex);
-    setRestLeft(0);
-    setTimerRunning(false);
-    toast.message(`Skipped ${name}`, {
-      description: "Move on — you can finish without it.",
-    });
-    skipLock.current = true;
-    fireTrashTalk("skip", { force: true, holdMs: 4500 });
-    const after = useFitnessStore.getState().active;
-    if (
-      after &&
-      after.currentExerciseIndex >= after.exercises.length - 1 &&
-      after.exercises.every((e) => e.skipped || e.sets.every((s) => s.done))
-    ) {
-      finishSession();
-    }
-  };
-
-  const handleSwap = (newId: string) => {
-    const next = getExercise(newId);
-    swapExercise(active.currentExerciseIndex, newId);
-    setSwapOpen(false);
-    setRestLeft(0);
-    autoStarted.current = null;
-    toast.success(`Swapped for ${next?.name ?? "alternative"}`);
-  };
-
-  const handleDone = () => {
-    if (current.skipped || restLeft > 0) return;
-    setTimerRunning(false);
-    advanceAfterMove();
-  };
-
-  const tips = exercise.tips.length ? exercise.tips : exercise.howTo;
-  const tip = tips[tipIndex % tips.length] ?? "";
-
   if (celebrate) {
     const twoDay = celebrate.streak === 2;
     return (
@@ -395,6 +330,72 @@ function WorkoutPage() {
       </div>
     );
   }
+
+  if (!active || !current || !exercise) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
+        <p className="text-lg font-semibold text-foreground">No active workout</p>
+        <p className="text-sm text-muted-foreground">
+          Start a session from Home to train.
+        </p>
+        <Button asChild>
+          <Link to="/">Back home</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  const headerSub = (() => {
+    if (phase === "warmup") return "Warm-up";
+    if (phase === "cooldown") return "Cooldown";
+    if (current.totalRounds && current.round) {
+      return `Round ${current.round} of ${current.totalRounds} · Move ${(current.circuitIndex ?? 0) + 1}/${current.circuitLength ?? "?"}`;
+    }
+    return `Move ${active.currentExerciseIndex + 1} of ${active.exercises.length}`;
+  })();
+
+  const targetReps = current.sets[0]?.reps ?? exercise.defaultReps;
+  const nextSlot = active.exercises[active.currentExerciseIndex + 1];
+  const nextExercise = nextSlot ? getExercise(nextSlot.exerciseId) : undefined;
+  const urgent = isTimed && timerRunning && workLeft > 0 && workLeft <= 5;
+
+  const handleSkip = () => {
+    const name = exercise.name;
+    skipExercise(active.currentExerciseIndex);
+    setRestLeft(0);
+    setTimerRunning(false);
+    skipLock.current = true;
+    fireTrashTalk("skip", { force: true, holdMs: 4500 });
+    const after = useFitnessStore.getState().active;
+    if (
+      after &&
+      after.exercises.every((e) => e.skipped || e.sets.every((s) => s.done))
+    ) {
+      finishSession();
+      return;
+    }
+    toast.message(`Skipped ${name}`, {
+      description: "Move on — you can finish without it.",
+    });
+  };
+
+  const handleSwap = (newId: string) => {
+    const next = getExercise(newId);
+    swapExercise(active.currentExerciseIndex, newId);
+    setSwapOpen(false);
+    setRestLeft(0);
+    autoStarted.current = null;
+    toast.success(`Swapped for ${next?.name ?? "alternative"}`);
+  };
+
+  const handleDone = () => {
+    if (current.skipped || restLeft > 0) return;
+    setTimerRunning(false);
+    advanceAfterMove();
+  };
+
+  const tips = exercise.tips.length ? exercise.tips : exercise.howTo;
+  const tip = tips[tipIndex % tips.length] ?? "";
 
   return (
     <div
