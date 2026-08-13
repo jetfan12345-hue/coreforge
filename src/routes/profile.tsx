@@ -95,7 +95,7 @@ function ProfilePage() {
           <CardTitle>Rest between moves</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          {[5, 10, 15, 20, 30].map((s) => (
+          {[5, 10, 15, 20].map((s) => (
             <Button
               key={s}
               size="sm"
@@ -112,19 +112,19 @@ function ProfilePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-[var(--color-primary)]" />
-            Demo coach & voice
+            Demo coach
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-[var(--color-muted)]">
-            Demo videos show proper form. Female has the full library; male
-            covers core moves and falls back to female when missing.
+            Demo videos show proper form. Male covers the beginner circuit;
+            Female has the full library.
           </p>
           <div className="grid grid-cols-2 gap-2">
             {(
               [
-                { value: "female" as const, label: "Female demos" },
-                { value: "male" as const, label: "Male demos" },
+                { value: "female" as const, label: "Female" },
+                { value: "male" as const, label: "Male" },
               ] as const
             ).map((opt) => {
               const on = (profile.demoModel ?? "female") === opt.value;
@@ -146,63 +146,68 @@ function ProfilePage() {
             })}
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              const next = !profile.coachTrashTalk;
-              setProfile({ coachTrashTalk: next });
-              if (next) {
-                unlockCoachAudio();
-                playCoachSample();
-                toast.message("Coach voice on", {
-                  description: TRASH_TALK_LINES[0],
-                });
-              } else {
-                toast.message("Coach voice off");
-              }
-            }}
-            className={cn(
-              "flex w-full items-start gap-3 rounded-[var(--radius-lg)] border px-3 py-3 text-left text-sm transition",
-              profile.coachTrashTalk
-                ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
-                : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
-            )}
-          >
-            <span
-              className={cn(
-                "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
-                profile.coachTrashTalk
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                  : "border-[var(--color-border-strong)]",
-              )}
-            >
-              {profile.coachTrashTalk && <Check className="h-3 w-3" />}
-            </span>
-            <span>
-              <span className="font-medium">Coach talks shit</span>
-              <span className="mt-0.5 block text-xs text-[var(--color-muted)]">
-                On-screen + voice roasts mid-workout. Turn this on — you should
-                hear a sample line right away; more play when you tap Done in a
-                session.
-              </span>
-            </span>
-          </button>
+          {(profile.demoModel ?? "female") === "female" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !profile.coachTrashTalk;
+                  setProfile({ coachTrashTalk: next });
+                  if (next) {
+                    unlockCoachAudio();
+                    playCoachSample();
+                    toast.message("Coach on", {
+                      description: TRASH_TALK_LINES[0],
+                    });
+                  } else {
+                    toast.message("Coach off");
+                  }
+                }}
+                className={cn(
+                  "flex w-full items-start gap-3 rounded-[var(--radius-lg)] border px-3 py-3 text-left text-sm transition",
+                  profile.coachTrashTalk
+                    ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
+                    : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+                    profile.coachTrashTalk
+                      ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
+                      : "border-[var(--color-border-strong)]",
+                  )}
+                >
+                  {profile.coachTrashTalk && <Check className="h-3 w-3" />}
+                </span>
+                <span>
+                  <span className="font-medium">Coach talks shit</span>
+                  <span className="mt-0.5 block text-xs text-[var(--color-muted)]">
+                    On-screen lines mid-set — female coach only. Optional
+                    voice clips play if they load.
+                  </span>
+                </span>
+              </button>
 
-          {profile.coachTrashTalk && (
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full"
-              onClick={() => {
-                unlockCoachAudio();
-                playCoachSample();
-                toast.message("Playing sample", {
-                  description: TRASH_TALK_LINES[0],
-                });
-              }}
-            >
-              Play sample line again
-            </Button>
+              {profile.coachTrashTalk && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  onClick={() => {
+                    unlockCoachAudio();
+                    playCoachSample();
+                    toast.message(TRASH_TALK_LINES[0]);
+                  }}
+                >
+                  Preview a line
+                </Button>
+              )}
+            </>
+          ) : (
+            <p className="text-xs text-[var(--color-muted)]">
+              Trash talk is the female coach only. Flip to Female to turn it on.
+            </p>
           )}
         </CardContent>
       </Card>
@@ -296,7 +301,7 @@ function ProfilePage() {
             </Select>
           </div>
           <div className="col-span-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-muted)]">
-            Est. BMR ~{Math.round(derived.bmr)} kcal · {derived.kg.toFixed(1)} kg ·{" "}
+            Est. BMR ~{Math.round(derived.bmr)} cal · {derived.kg.toFixed(1)} kg ·{" "}
             {Math.round(derived.cm)} cm
           </div>
           <Button

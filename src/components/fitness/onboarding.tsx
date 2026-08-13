@@ -296,19 +296,11 @@ export function Onboarding() {
             <div className="grid grid-cols-2 gap-2">
               {(
                 [
-                  {
-                    value: "male" as const,
-                    label: "Male",
-                    hint: "Male model",
-                  },
-                  {
-                    value: "female" as const,
-                    label: "Female",
-                    hint: "Female model",
-                  },
+                  { value: "female" as const, label: "Female" },
+                  { value: "male" as const, label: "Male" },
                 ] as const
               ).map((opt) => {
-                const on = (form.demoModel ?? "male") === opt.value;
+                const on = (form.demoModel ?? "female") === opt.value;
                 return (
                   <button
                     key={opt.value}
@@ -323,7 +315,7 @@ export function Onboarding() {
                   >
                     <span className="block text-sm font-medium">{opt.label}</span>
                     <span className="text-[11px] text-[var(--color-subtle)]">
-                      {opt.hint}
+                      Form videos
                     </span>
                   </button>
                 );
@@ -357,6 +349,38 @@ export function Onboarding() {
             </div>
           </div>
 
+
+          {form.demoModel === "female" && (
+            <button
+              type="button"
+              onClick={() => set("coachTrashTalk", !form.coachTrashTalk)}
+              className={cn(
+                "flex w-full items-start gap-3 rounded-[var(--radius-lg)] border px-3 py-3 text-left transition",
+                form.coachTrashTalk
+                  ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
+                  : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
+              )}
+            >
+              <span
+                className={cn(
+                  "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
+                  form.coachTrashTalk
+                    ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
+                    : "border-[var(--color-border-strong)]",
+                )}
+              >
+                {form.coachTrashTalk && <Check className="h-3 w-3" />}
+              </span>
+              <span>
+                <span className="block text-sm font-medium">
+                  Coach talks shit
+                </span>
+                <span className="text-xs text-[var(--color-muted)]">
+                  On-screen roasts mid-set. Female coach only.
+                </span>
+              </span>
+            </button>
+          )}
 
           {ownedCount > 0 && (
             <button
@@ -417,7 +441,7 @@ export function Onboarding() {
                   restSeconds: rest,
                   gear: form.gear,
                   includeGearOverload: form.includeGearOverload,
-                  demoModel: form.demoModel ?? "male",
+                  demoModel: form.demoModel ?? "female",
                   coachTrashTalk: form.coachTrashTalk ?? false,
                   programStartedAt: new Date().toISOString().slice(0, 10),
                 })

@@ -32,7 +32,7 @@ export interface UserProfile {
   onboarded: boolean;
   /** Demo coach in exercise media */
   demoModel: "female" | "male";
-  /** Female coach trash-talks mid-workout (text + speech) */
+  /** Female coach trash-talks mid-workout (on-screen lines; optional MP3s) */
   coachTrashTalk: boolean;
 }
 
@@ -598,7 +598,7 @@ export const useFitnessStore = create<FitnessState>()(
           demoModel:
             rawProfile.demoModel === "female" || rawProfile.demoModel === "male"
               ? rawProfile.demoModel
-              : (current.profile.demoModel ?? "male"),
+              : (current.profile.demoModel ?? "female"),
           coachTrashTalk:
             typeof rawProfile.coachTrashTalk === "boolean"
               ? rawProfile.coachTrashTalk

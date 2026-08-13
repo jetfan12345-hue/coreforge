@@ -18,7 +18,7 @@ export function ExerciseCard({
 }) {
   const favorites = useFitnessStore((s) => s.favorites);
   const toggleFavorite = useFitnessStore((s) => s.toggleFavorite);
-  const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "male");
+  const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "female");
   const media = resolveExerciseMedia(exercise, demoModel);
   const [imgSrc, setImgSrc] = useState(media.image);
   const isFav = favorites.includes(exercise.id);

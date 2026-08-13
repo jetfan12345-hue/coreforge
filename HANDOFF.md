@@ -34,19 +34,9 @@ Gear-aware programs: bodyweight by default; barbell / plates / cable / pull-up b
 
 ## Known form / media debt (fix these first if reviewing)
 
-User has repeatedly flagged:
+Audited 2026-08-13. Penguin is a distinct heel-reach demo (no longer a copy of heel-touch). Dead bug, flutter kick, reverse crunch, V-up, plank shoulder tap, and plank hip dip were rebuilt so the *motion* matches the cues. Crunch ROM and hollow hold were verified as matching the written form. Male coach now covers the beginner circuit (incl. dead bug, penguin, prone T).
 
-| Move | Required form |
-| --- | --- |
-| Dead bug | Still was wrong last review — opposite limbs from tabletop |
-| Crunch | ROM still a bit high — lower it |
-| Penguin crunch | Was totally wrong — fix or delete |
-| Bird dog | True quadruped opposite arm/leg, L then R then loop |
-| Flutter kick / reverse crunch / V-up / hollow | Must match textbook form |
-| Plank shoulder tap | Tap shoulder, switch sides |
-| Plank hip dip | Show one side then the other (or back/side angle) |
-
-Media lives in `public/exercises/{id}.jpg|.mp4` (female) and `public/exercises/male/` (male, incomplete — UI falls back to female on 404). Cache-bust with the `V` constant in `src/data/exercises.ts`.
+Media lives in `public/exercises/{id}.jpg|.mp4` (female) and `public/exercises/male/` (male, incomplete beyond beginner — UI falls back to female on 404). Cache-bust with the `V` constant in `src/data/exercises.ts`.
 
 **Identity lock:** keep physique + face consistent. Do not regenerate a shredded model in one clip and a soft model in the next. Prefer editing from an identity-lock still, then image-to-video.
 

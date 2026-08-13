@@ -10,9 +10,10 @@ import {
   Target,
   Zap,
 } from "lucide-react";
-import { exercises, getExercise, heroImage, type Equipment } from "@/data/exercises";
+import { exercises, getExercise, heroImage, resolveExerciseMedia, type Equipment } from "@/data/exercises";
 
 import {
+  advancedGearBlocks,
   beginnerMonthWeeks,
   buildSessionSlots,
   circuitRounds,
@@ -247,6 +248,14 @@ function HomePage() {
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
           {GEAR_OPTIONS.map(({ key, label, hint }) => {
             const on = Boolean(gear?.[key]);
+            const unlocks = advancedGearBlocks.find((b) =>
+              b.needs.includes(key),
+            );
+            const unlockNames = (unlocks?.exerciseIds ?? [])
+              .map((id) => getExercise(id)?.shortName)
+              .filter(Boolean)
+              .slice(0, 2)
+              .join(" · ");
             return (
               <button
                 key={key}
@@ -270,7 +279,9 @@ function HomePage() {
                   {on ? "✓ " : ""}
                   {label}
                 </p>
-                <p className="text-[10px] text-[var(--color-subtle)]">{hint}</p>
+                <p className="text-[10px] text-[var(--color-subtle)]">
+                  {on && unlockNames ? `Unlocks ${unlockNames}` : hint}
+                </p>
               </button>
             );
           })}
@@ -360,12 +371,36 @@ function HomePage() {
 
       <section className="space-y-4">
         <div>
-          <h2 className="font-display text-lg font-semibold tracking-tight">
-            Today’s session
-          </h2>
-          <p className="text-xs text-[var(--color-muted)]">
-            Follow-along circuit · mix of timed & rep moves · auto warm-up & stretch
-          </p>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-semibold tracking-tight">
+                Today’s session
+              </h2>
+              <p className="text-xs text-[var(--color-muted)]">
+                Follow-along circuit · mix of timed & rep moves · auto warm-up & stretch
+              </p>
+            </div>
+            <div className="flex shrink-0 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] p-0.5">
+              {(["female", "male"] as const).map((m) => {
+                const on = (profile.demoModel ?? "female") === m;
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setProfile({ demoModel: m })}
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-[11px] font-semibold capitalize transition",
+                      on
+                        ? "bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
+                        : "text-[var(--color-muted)]",
+                    )}
+                  >
+                    {m === "female" ? "Female" : "Male"}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         <Tabs value={tab} onValueChange={(v) => setTab(v as ProgramId)}>
@@ -392,7 +427,7 @@ function HomePage() {
         <div className="overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--color-border)] bg-[var(--color-surface)]">
           <div className="relative h-44 w-full sm:h-52">
             <img
-              src={heroImage(profile.demoModel ?? "male")}
+              src={heroImage(profile.demoModel ?? "female")}
               alt=""
               className="absolute inset-0 h-full w-full object-cover object-[center_20%]"
             />
@@ -460,7 +495,7 @@ function HomePage() {
                 <p className="text-[10px] uppercase tracking-wide text-[var(--color-subtle)]">
                   Cooldown
                 </p>
-                <p className="font-display text-sm font-semibold">4 stretches</p>
+                <p className="font-display text-sm font-semibold">2 stretches</p>
               </div>
             </div>
 
@@ -589,6 +624,10 @@ function HomePage() {
                 {displayIds.map((id, i) => {
                   const ex = getExercise(id);
                   if (!ex) return null;
+                  const thumb = resolveExerciseMedia(
+                    ex,
+                    profile.demoModel ?? "female",
+                  ).image;
                   return (
                     <li
                       key={`${id}-${i}`}
@@ -598,9 +637,12 @@ function HomePage() {
                         {i + 1}
                       </span>
                       <img
-                        src={ex.image}
+                        src={thumb}
                         alt=""
                         className="h-11 w-11 rounded-md object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = ex.image;
+                        }}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{ex.name}</p>
@@ -622,7 +664,7 @@ function HomePage() {
                   Jumping jacks · Mountain climbers
                   <br />
                   <span className="font-medium text-[var(--color-fg)]">Cooldown:</span>{" "}
-                  Cobra · Prone T · Hip shift L/R
+                  Cobra stretch · Prone T
                 </li>
               </ol>
             )}

@@ -62,6 +62,8 @@ function WorkoutPage() {
   const coachTrashTalk = useFitnessStore(
     (s) => s.profile.coachTrashTalk ?? false,
   );
+  const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "female");
+  const trashEnabled = coachTrashTalk && demoModel === "female";
   const setRestSeconds = useFitnessStore((s) => s.setRestSeconds);
   const updateActiveSet = useFitnessStore((s) => s.updateActiveSet);
   const completeCurrentMove = useFitnessStore((s) => s.completeCurrentMove);
@@ -100,20 +102,20 @@ function WorkoutPage() {
     window.addEventListener("keydown", unlock, { once: true });
     window.addEventListener("touchstart", unlock, { once: true });
     // Also unlock immediately if coach is already on and user navigated here via tap.
-    if (coachTrashTalk) unlock();
+    if (trashEnabled) unlock();
     return () => {
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
       window.removeEventListener("touchstart", unlock);
     };
-  }, [coachTrashTalk]);
+  }, [trashEnabled]);
 
   useEffect(() => {
-    if (coachTrashTalk) {
+    if (trashEnabled) {
       unlockCoachAudio();
       void preloadCoachAudio();
     }
-  }, [coachTrashTalk]);
+  }, [trashEnabled]);
 
   const progress = useMemo(() => {
     if (!active) return 0;
@@ -152,7 +154,7 @@ function WorkoutPage() {
 
   const fireTrashTalk = useCallback(
     (force = false) => {
-      if (!coachTrashTalk) return;
+      if (!trashEnabled) return;
       const now = Date.now();
       if (!force && now - trashAt.current < 12_000) return;
       trashAt.current = now;
@@ -167,7 +169,7 @@ function WorkoutPage() {
         setCoachLine((cur) => (cur === line ? null : cur));
       }, 4500);
     },
-    [coachTrashTalk],
+    [trashEnabled],
   );
 
   useEffect(() => {
@@ -213,12 +215,21 @@ function WorkoutPage() {
     const skipped = active?.exercises.filter((e) => e.skipped).length ?? 0;
     const result = finishWorkout();
     const streak = streakDaysFn();
+    const twoDay = streak === 2;
     setCelebrate({
       calories: result?.totalCalories ?? liveCals,
       streak,
       skipped,
-      headline: pickLine(FINISH_LINES),
-      sub: streak > 0 ? pickLine(STREAK_LINES) : "First session in the books.",
+      headline: twoDay
+        ? "Two days. That's a streak, not a fluke."
+        : pickLine(FINISH_LINES),
+      sub: twoDay
+        ? "Come back tomorrow and it's real. Don't ghost me now."
+        : streak > 2
+          ? pickLine(STREAK_LINES)
+          : streak === 1
+            ? "Day one in the books. Tomorrow makes it a streak."
+            : "First session in the books.",
     });
   }, [active, finishWorkout, streakDaysFn, liveCals]);
 
@@ -287,6 +298,8 @@ function WorkoutPage() {
   })();
 
   const targetReps = current.sets[0]?.reps ?? exercise.defaultReps;
+  const nextSlot = active.exercises[active.currentExerciseIndex + 1];
+  const nextExercise = nextSlot ? getExercise(nextSlot.exerciseId) : undefined;
 
   const handleSkip = () => {
     unlockCoachAudio();
@@ -297,7 +310,7 @@ function WorkoutPage() {
     toast.message(`Skipped ${name}`, {
       description: "Move on — you can finish without it.",
     });
-    if (coachTrashTalk) {
+    if (trashEnabled) {
       const line = TRASH_TALK_LINES[11]!;
       setCoachLine(line);
       void playCoachLine(11);
@@ -341,10 +354,16 @@ function WorkoutPage() {
   const tip = tips[tipIndex % tips.length] ?? "";
 
   if (celebrate) {
+    const twoDay = celebrate.streak === 2;
     return (
       <div className="relative mx-auto flex min-h-[70vh] max-w-lg flex-col items-center justify-center gap-5 p-6 text-center">
-        <ConfettiBurst active />
+        <ConfettiBurst active durationMs={twoDay ? 5200 : 2800} />
         <PartyPopper className="h-10 w-10 text-[var(--color-primary)]" />
+        {twoDay && (
+          <p className="rounded-full border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-[var(--color-primary)]">
+            2-day streak
+          </p>
+        )}
         <h1 className="font-display text-3xl font-bold tracking-tight">
           {celebrate.headline}
         </h1>
@@ -354,7 +373,14 @@ function WorkoutPage() {
             <p className="text-xs text-[var(--color-subtle)]">Calories</p>
             <p className="text-xl font-semibold tabular">{celebrate.calories}</p>
           </div>
-          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+          <div
+            className={cn(
+              "rounded-[var(--radius-lg)] border bg-[var(--color-surface)] p-3",
+              twoDay
+                ? "border-[var(--color-primary)]/50"
+                : "border-[var(--color-border)]",
+            )}
+          >
             <p className="text-xs text-[var(--color-subtle)]">Streak</p>
             <p className="text-xl font-semibold tabular">{celebrate.streak}d</p>
           </div>
@@ -393,6 +419,7 @@ function WorkoutPage() {
         <div className="flex items-center gap-1 text-xs text-[var(--color-muted)]">
           <Flame className="h-3.5 w-3.5 text-[var(--color-primary)]" />
           <span className="tabular">{liveCals}</span>
+          <span className="text-[var(--color-subtle)]">cal</span>
         </div>
       </div>
 
@@ -513,7 +540,9 @@ function WorkoutPage() {
 
       {circuitMode && (
         <p className="text-center text-xs text-[var(--color-subtle)]">
-          Circuit mode · one set per move
+          {nextExercise
+            ? `Next · ${nextExercise.name}`
+            : "Last move · finish strong"}
         </p>
       )}
 

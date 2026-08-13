@@ -52,7 +52,7 @@ export interface Exercise {
   role?: ExerciseRole;
 }
 
-const V = 20;
+const V = 21;
 
 function media(id: string) {
   return {
@@ -881,10 +881,10 @@ export const exercises: Exercise[] = [
 		popularRank: 20,
 		...media("penguin-crunch"),
 		cues: [
-			"Shoulders up",
-			"Touch right heel",
-			"Touch left heel",
-			"Stay braced"
+			"Feet flat",
+			"Reach right heel",
+			"Reach left heel",
+			"Stay low"
 		]
 	},
 	{
