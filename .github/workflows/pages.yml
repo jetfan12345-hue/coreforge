@@ -29,9 +29,9 @@ jobs:
       - run: npm ci
       - run: npm run build:pages
 
-      # configure-pages / deploy-pages 404 until a Pages site exists.
-      # Creating it here uses GITHUB_TOKEN pages:write (the Cursor GitHub App
-      # token cannot). Matches Settings → Pages → Source: GitHub Actions.
+      # GitHub Apps / GITHUB_TOKEN cannot enable Pages (403). We still try so
+      # the first owner click on Settings → Pages is enough; until then the
+      # publish-branch job keeps gh-pages current for "Deploy from branch".
       - name: Ensure GitHub Pages uses GitHub Actions
         env:
           GH_TOKEN: ${{ github.token }}

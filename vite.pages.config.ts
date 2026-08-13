@@ -26,10 +26,13 @@ function pagesSpaFallback(): Plugin {
 
 /**
  * Static SPA for GitHub Pages at /coreforge/.
+ * Relative base so the same build also works on a CDN (jsDelivr / statically)
+ * before project Pages is enabled, and still resolves under
+ * https://jetfan12345-hue.github.io/coreforge/ once Pages is on.
  * Does not use nitro / TanStack Start SSR — `npm run dev` and `npm run build` stay as they are.
  */
 export default defineConfig({
-  base: "/coreforge/",
+  base: "./",
   publicDir: path.join(root, "public"),
   envPrefix: ["VITE_"],
   define: {

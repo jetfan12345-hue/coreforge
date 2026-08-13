@@ -1,8 +1,16 @@
 /** Prefix repo `public/` paths with the Vite base (Pages is `/coreforge/`). */
 export function publicUrl(path: string): string {
+  const normalizedPath = path.replace(/^\/+/, "");
+  const mediaBase = import.meta.env.VITE_MEDIA_BASE;
+  if (typeof mediaBase === "string" && mediaBase.length > 0) {
+    const b = mediaBase.endsWith("/") ? mediaBase : `${mediaBase}/`;
+    return `${b}${normalizedPath}`;
+  }
   const base = import.meta.env.BASE_URL || "/";
-  const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (base === "./" || base === "." || base === "") {
+    return `./${normalizedPath}`;
+  }
+  const normalizedBase = base.endsWith("/") ? base : `${base}/`;
   return `${normalizedBase}${normalizedPath}`;
 }
 
