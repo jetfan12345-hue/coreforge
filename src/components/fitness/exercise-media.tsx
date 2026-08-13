@@ -66,123 +66,119 @@ export function ExerciseMedia({
     <div className="space-y-3">
       <div
         className={cn(
-          "relative overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-2)]",
+          "overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-2)]",
           className,
         )}
       >
-        <div className="relative aspect-[4/5] h-full max-h-[inherit] w-full sm:aspect-video">
-          {useVideo && videoSrc ? (
-            <video
-              key={videoSrc}
-              ref={videoRef}
-              className="absolute inset-0 h-full w-full object-cover object-center"
-              src={videoSrc}
-              poster={imgSrc}
-              autoPlay={playing}
-              muted
-              loop
-              playsInline
-              onError={() => {
-                // Male missing → try female video, then still image
-                if (videoSrc !== media.femaleVideo && media.femaleVideo) {
-                  setVideoSrc(media.femaleVideo);
-                  setImgSrc(media.femaleImage);
-                } else {
-                  setUseVideo(false);
-                }
-              }}
-            />
-          ) : imgSrc ? (
-            <img
-              src={imgSrc}
-              alt={`${exercise.name} demonstration`}
-              className={cn(
-                "absolute inset-0 h-full w-full object-cover object-center transition-transform duration-[4s] ease-out",
-                playing && "scale-105",
-              )}
-              onError={() => {
-                if (imgSrc !== media.femaleImage) {
-                  setImgSrc(media.femaleImage);
-                } else {
-                  setImgSrc("");
-                }
-              }}
-            />
-          ) : (
-            <div
-              className="absolute inset-0 flex items-center justify-center"
-              style={{ background: gradient }}
-            >
-              <FormSilhouette exerciseId={exercise.id} />
-            </div>
-          )}
-
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15" />
-          {overlay}
-
-          <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-2">
-            <span className="rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-white/90 backdrop-blur-sm">
-              {useVideo ? "Full-ROM loop" : "Demo"}
-            </span>
-            {exercise.weighted && (
-              <span className="rounded-full bg-[var(--color-accent)]/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-accent-fg)]">
-                Weighted
-              </span>
-            )}
-          </div>
-
-          <div className="absolute inset-x-0 bottom-0 p-4">
-            <div className="pointer-events-none mb-3 min-h-[1.5rem]">
-              <p
-                key={cueIndex}
-                className="cue-enter font-display text-lg font-semibold tracking-tight text-white drop-shadow"
-              >
-                {cues[cueIndex]}
-              </p>
-              <div className="mt-2 flex gap-1">
-                {cues.map((_, i) => (
-                  <span
-                    key={i}
-                    className={cn(
-                      "h-1 flex-1 rounded-full transition-colors",
-                      i === cueIndex ? "bg-[var(--color-primary)]" : "bg-white/25",
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button
-                size="icon-sm"
-                variant="secondary"
-                className="border-0 bg-white/15 text-white hover:bg-white/25"
-                onClick={() => setPlaying((p) => !p)}
-                aria-label={playing ? "Pause demo" : "Play demo"}
-              >
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-              <Button
-                size="icon-sm"
-                variant="secondary"
-                className="border-0 bg-white/15 text-white hover:bg-white/25"
-                onClick={() => {
-                  setCueIndex(0);
-                  const el = videoRef.current;
-                  if (el) {
-                    el.currentTime = 0;
-                    if (playing) void el.play().catch(() => undefined);
+        <div className="flex justify-center bg-black">
+          <div className="relative aspect-[9/16] h-[min(52dvh,480px)] max-w-full">
+            {useVideo && videoSrc ? (
+              <video
+                key={videoSrc}
+                ref={videoRef}
+                className="h-full w-full object-contain object-center"
+                src={videoSrc}
+                poster={imgSrc}
+                autoPlay={playing}
+                muted
+                loop
+                playsInline
+                onError={() => {
+                  if (videoSrc !== media.femaleVideo && media.femaleVideo) {
+                    setVideoSrc(media.femaleVideo);
+                    setImgSrc(media.femaleImage);
+                  } else {
+                    setUseVideo(false);
                   }
                 }}
-                aria-label="Restart demo"
+              />
+            ) : imgSrc ? (
+              <img
+                src={imgSrc}
+                alt={`${exercise.name} demonstration`}
+                className="h-full w-full object-contain object-center"
+                onError={() => {
+                  if (imgSrc !== media.femaleImage) {
+                    setImgSrc(media.femaleImage);
+                  } else {
+                    setImgSrc("");
+                  }
+                }}
+              />
+            ) : (
+              <div
+                className="flex h-full w-full items-center justify-center"
+                style={{ background: gradient }}
               >
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-              <span className="pointer-events-none ml-auto flex items-center gap-1.5 text-xs text-white/70">
-                <Volume2 className="h-3.5 w-3.5" />
-                Form guide
+                <FormSilhouette exerciseId={exercise.id} />
+              </div>
+            )}
+
+            {overlay}
+
+            <div className="pointer-events-none absolute left-2 top-2 flex flex-wrap gap-2">
+              <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/90 backdrop-blur-sm">
+                {useVideo ? "Full-ROM loop" : "Demo"}
               </span>
+              {exercise.weighted && (
+                <span className="rounded-full bg-[var(--color-accent)]/90 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-accent-fg)]">
+                  Weighted
+                </span>
+              )}
             </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--color-border)] px-3 py-2.5">
+          <div className="mb-2 min-h-[1.25rem]">
+            <p
+              key={cueIndex}
+              className="cue-enter font-display text-base font-semibold tracking-tight"
+            >
+              {cues[cueIndex]}
+            </p>
+            <div className="mt-1.5 flex gap-1">
+              {cues.map((_, i) => (
+                <span
+                  key={i}
+                  className={cn(
+                    "h-1 flex-1 rounded-full transition-colors",
+                    i === cueIndex
+                      ? "bg-[var(--color-primary)]"
+                      : "bg-[var(--color-surface-3)]",
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              size="icon-sm"
+              variant="secondary"
+              onClick={() => setPlaying((p) => !p)}
+              aria-label={playing ? "Pause demo" : "Play demo"}
+            >
+              {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            </Button>
+            <Button
+              size="icon-sm"
+              variant="secondary"
+              onClick={() => {
+                setCueIndex(0);
+                const el = videoRef.current;
+                if (el) {
+                  el.currentTime = 0;
+                  if (playing) void el.play().catch(() => undefined);
+                }
+              }}
+              aria-label="Restart demo"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </Button>
+            <span className="pointer-events-none ml-auto flex items-center gap-1.5 text-xs text-[var(--color-subtle)]">
+              <Volume2 className="h-3.5 w-3.5" />
+              Form guide
+            </span>
           </div>
         </div>
       </div>

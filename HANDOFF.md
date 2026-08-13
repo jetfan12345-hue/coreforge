@@ -46,7 +46,7 @@ Media lives in `public/exercises/{id}.jpg|.mp4` (female) and `public/exercises/m
 - TanStack Start. `vite.config.ts` must stay standalone (no vendored `vite-tanstack-config`). Gate `nitro({ preset: "vercel" })` on `command === "build"` so dev stays on a single port.
 - Public live copy for Don (click this): **https://black-tree-1904.zerodeploy.app/** — static SPA, form demos, trash talk, cinema player. Lasts until 16 Aug 2026 unless Pages is on.
 - Lasting URL: **https://jetfan12345-hue.github.io/coreforge/** — `npm run build:pages` + `.github/workflows/pages.yml` publishes `gh-pages`. GitHub blocks apps from *enabling* Pages; once the repo owner sets Settings → Pages → source **GitHub Actions** or branch **gh-pages**, that URL is the app. Nested routes use hash (`#/workout`). `npm run dev` / Vercel nitro build are unchanged.
-- Persist profile in Zustand (`src/store/fitness.ts`). `demoModel` and `coachTrashTalk` merge on rehydrate.
+- Persist profile in Zustand (`src/store/fitness.ts`). `demoModel` and `coachTrashTalk` merge on rehydrate. First-open is **Get to it** (train now, floor defaults) or optional **Enter some details** — never a 3-step quiz.
 - `resolveExerciseMedia()` switches male/female paths.
 - Workout player is cinema mode (no bottom nav). Coach lines overlay the demo. `src/lib/coach-audio.ts` is a no-op on purpose.
 - Do not re-scaffold. Edit in place. Leave the dev server running.

@@ -442,7 +442,7 @@ function WorkoutPage() {
 
       <ExerciseMedia
         exercise={exercise}
-        className="max-h-[42vh]"
+        className=""
         compact
         overlay={
           <>
