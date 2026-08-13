@@ -10,6 +10,7 @@ import { AppShell } from "@/components/fitness/shell";
 import { useFitnessStore } from "@/store/fitness";
 import { Onboarding } from "@/components/fitness/onboarding";
 import { ClientOnly } from "@/components/fitness/client-only";
+import { isPagesSpa } from "@/lib/public-url";
 import appCss from "@/styles.css?url";
 
 export const Route = createRootRoute({
@@ -69,6 +70,9 @@ function AppBody() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  if (isPagesSpa) {
+    return <>{children}</>;
+  }
   return (
     <html lang="en">
       <head>

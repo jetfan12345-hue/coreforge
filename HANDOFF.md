@@ -44,7 +44,7 @@ Media lives in `public/exercises/{id}.jpg|.mp4` (female) and `public/exercises/m
 ## Architecture notes
 
 - TanStack Start. `vite.config.ts` must stay standalone (no vendored `vite-tanstack-config`). Gate `nitro({ preset: "vercel" })` on `command === "build"` so dev stays on a single port.
-- Preview / sandbox: listen on `0.0.0.0:8080`. Own `/workspace/startup.sh` (idempotent).
+- Public live copy for Don: **https://jetfan12345-hue.github.io/coreforge/** — static SPA (`npm run build:pages`). Nested routes use hash (`#/workout`) so refresh works on GitHub Pages. `npm run dev` / Vercel nitro build are unchanged.
 - Persist profile in Zustand (`src/store/fitness.ts`). `demoModel` and `coachTrashTalk` merge on rehydrate.
 - `resolveExerciseMedia()` switches male/female paths.
 - Workout player is cinema mode (no bottom nav). Coach lines overlay the demo. `src/lib/coach-audio.ts` is a no-op on purpose.

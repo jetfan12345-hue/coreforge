@@ -52,12 +52,14 @@ export interface Exercise {
   role?: ExerciseRole;
 }
 
+import { publicUrl } from "@/lib/public-url";
+
 const V = 21;
 
 function media(id: string) {
   return {
-    image: `/exercises/${id}.jpg?v=${V}`,
-    video: `/exercises/${id}.mp4?v=${V}`,
+    image: `${publicUrl(`/exercises/${id}.jpg`)}?v=${V}`,
+    video: `${publicUrl(`/exercises/${id}.mp4`)}?v=${V}`,
   };
 }
 
@@ -68,8 +70,8 @@ export function resolveExerciseMedia(
 ): { image: string; video?: string; femaleImage: string; femaleVideo?: string } {
   if (model === "male") {
     return {
-      image: `/exercises/male/${exercise.id}.jpg?v=${V}`,
-      video: `/exercises/male/${exercise.id}.mp4?v=${V}`,
+      image: `${publicUrl(`/exercises/male/${exercise.id}.jpg`)}?v=${V}`,
+      video: `${publicUrl(`/exercises/male/${exercise.id}.mp4`)}?v=${V}`,
       femaleImage: exercise.image,
       femaleVideo: exercise.video,
     };
@@ -84,8 +86,8 @@ export function resolveExerciseMedia(
 
 export function heroImage(model: DemoModel = "female"): string {
   return model === "male"
-    ? `/exercises/male/hero.jpg?v=${V}`
-    : `/exercises/hero.jpg?v=${V}`;
+    ? `${publicUrl("/exercises/male/hero.jpg")}?v=${V}`
+    : `${publicUrl("/exercises/hero.jpg")}?v=${V}`;
 }
 
 /**
