@@ -268,6 +268,13 @@ function WorkoutPage() {
     advanceAfterMove();
   }, [workLeft, isTimed, timerRunning, restLeft, advanceAfterMove]);
 
+  const alts = useMemo(() => {
+    if (!exercise) return [];
+    return getAlternatives(exercise.id)
+      .map((id) => getExercise(id))
+      .filter((e): e is Exercise => Boolean(e));
+  }, [exercise?.id, getAlternatives]);
+
   if (!active || !current || !exercise) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
@@ -330,12 +337,6 @@ function WorkoutPage() {
     setTimerRunning(false);
     advanceAfterMove();
   };
-
-  const alts = useMemo(() => {
-    return getAlternatives(exercise.id)
-      .map((id) => getExercise(id))
-      .filter((e): e is Exercise => Boolean(e));
-  }, [exercise.id, getAlternatives]);
 
   const tips = exercise.tips.length ? exercise.tips : exercise.howTo;
   const tip = tips[tipIndex % tips.length] ?? "";
