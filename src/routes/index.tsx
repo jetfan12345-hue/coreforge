@@ -260,11 +260,12 @@ function HomePage() {
             <Button
               className="h-14 w-full text-base font-semibold"
               size="lg"
+              variant={canResume ? "secondary" : "default"}
               disabled={!slots.length}
               onClick={launch}
             >
               <Play className="h-5 w-5" />
-              Start circuit
+              {canResume ? "Start new circuit" : "Start circuit"}
               <ArrowRight className="h-5 w-5" />
             </Button>
             {!slots.length && tab === "custom" && (

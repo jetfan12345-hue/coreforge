@@ -18,7 +18,12 @@ function routePath(pathname: string, hash: string): string {
   if (raw === "/coreforge" || raw.startsWith("/coreforge/")) {
     raw = raw.slice("/coreforge".length) || "/";
   }
+  if (raw === "/index.html" || raw.endsWith("/index.html")) return "/";
   return raw;
+}
+
+function isHomePath(path: string): boolean {
+  return path === "/" || path === "" || path === "/index.html";
 }
 
 function tabIsActive(path: string, to: string): boolean {
@@ -32,7 +37,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const active = useFitnessStore((s) => s.active);
   const onboarded = useFitnessStore((s) => s.profile.onboarded);
   const cinema = path === "/workout" || !onboarded;
-  const showHeaderResume = isResumableSession(active) && path !== "/";
+  const showHeaderResume = isResumableSession(active) && !isHomePath(path);
 
   return (
     <div className="mesh-bg min-h-dvh">

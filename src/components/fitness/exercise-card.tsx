@@ -11,10 +11,13 @@ export function ExerciseCard({
   exercise,
   bodyKg,
   compact,
+  listIndex,
 }: {
   exercise: Exercise;
   bodyKg: number;
   compact?: boolean;
+  /** 1-based index in the current filtered list (hides jumpy popularRank). */
+  listIndex?: number;
 }) {
   const favorites = useFitnessStore((s) => s.favorites);
   const toggleFavorite = useFitnessStore((s) => s.toggleFavorite);
@@ -88,9 +91,11 @@ export function ExerciseCard({
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           {!compact && (
             <div className="absolute bottom-2 left-2 flex gap-1.5">
-              <Badge variant="secondary" className="bg-black/50 text-white border-0">
-                #{exercise.popularRank}
-              </Badge>
+              {listIndex != null && (
+                <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                  #{listIndex}
+                </Badge>
+              )}
               {exercise.weighted && <Badge variant="weighted">Weighted</Badge>}
             </div>
           )}

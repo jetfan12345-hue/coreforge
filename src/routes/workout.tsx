@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   Flame,
+  SkipBack,
   SkipForward,
   RefreshCw,
   Play,
@@ -94,6 +95,8 @@ function WorkoutPage() {
   const setRestSeconds = useFitnessStore((s) => s.setRestSeconds);
   const updateActiveSet = useFitnessStore((s) => s.updateActiveSet);
   const completeCurrentMove = useFitnessStore((s) => s.completeCurrentMove);
+  const markSessionBegun = useFitnessStore((s) => s.markSessionBegun);
+  const reopenMove = useFitnessStore((s) => s.reopenMove);
   const skipExercise = useFitnessStore((s) => s.skipExercise);
   const swapExercise = useFitnessStore((s) => s.swapExercise);
   const getAlternatives = useFitnessStore((s) => s.getAlternatives);
@@ -111,11 +114,12 @@ function WorkoutPage() {
   const [goFlash, setGoFlash] = useState(false);
   const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
+  const [inRest, setInRest] = useState(false);
   const autoStarted = useRef<string | null>(null);
   const trashAt = useRef(0);
   const skipLock = useRef(false);
   const completingTimed = useRef(false);
-  const restPending = useRef(false);
+  const restWasActive = useRef(false);
 
   const current = active?.exercises[active.currentExerciseIndex];
   const exercise = current ? getExercise(current.exerciseId) : undefined;
@@ -193,33 +197,36 @@ function WorkoutPage() {
   }, [active, bodyKg]);
 
   useEffect(() => {
-    if (!isTimed || !timerRunning || workLeft <= 0) return;
+    markSessionBegun();
+  }, [markSessionBegun]);
+
+  useEffect(() => {
+    if (!isTimed || !timerRunning || workLeft <= 0 || inRest) return;
     const t = window.setInterval(() => {
       setWorkLeft((w) => Math.max(0, w - 1));
     }, 1000);
     return () => window.clearInterval(t);
-  }, [isTimed, timerRunning, workLeft > 0]);
+  }, [isTimed, timerRunning, workLeft > 0, inRest]);
 
   useEffect(() => {
-    if (restLeft <= 0) return;
+    if (!inRest || restLeft <= 0) return;
     const t = window.setInterval(() => {
       setRestLeft((r) => Math.max(0, r - 1));
     }, 1000);
     return () => window.clearInterval(t);
-  }, [restLeft > 0]);
+  }, [inRest, restLeft > 0]);
 
   useEffect(() => {
-    completingTimed.current = false;
+    if (inRest) {
+      setTimerRunning(false);
+      return;
+    }
     if (!exercise || !current || !active) return;
     const key = `${active.currentExerciseIndex}-${exercise.id}`;
     if (autoStarted.current === key) return;
     autoStarted.current = key;
+    completingTimed.current = false;
     setPaused(false);
-    if (restLeft > 0 || restPending.current) {
-      setTimerRunning(false);
-      setWorkLeft(0);
-      return;
-    }
     if (isTimed) {
       const sec = current.sets[0]?.seconds || exercise.defaultSeconds || 30;
       setWorkLeft(sec);
@@ -230,11 +237,11 @@ function WorkoutPage() {
       setTimerRunning(false);
       setWorkLeft(0);
     }
-  }, [exercise?.id, active?.currentExerciseIndex]);
+  }, [exercise?.id, active?.currentExerciseIndex, inRest]);
 
   useEffect(() => {
     if (!trashEnabled || !exercise) return;
-    if (restLeft > 0) {
+    if (inRest) {
       fireTrashTalk("rest", { force: true, holdMs: 3800 });
       return;
     }
@@ -249,7 +256,7 @@ function WorkoutPage() {
   }, [
     exercise?.id,
     active?.currentExerciseIndex,
-    restLeft > 0,
+    inRest,
     trashEnabled,
     phase,
     isLastWork,
@@ -309,8 +316,10 @@ function WorkoutPage() {
       finishSession();
       return;
     }
-    restPending.current = true;
-    setRestLeft(peek.restSeconds || restPreference);
+    autoStarted.current = null;
+    completingTimed.current = false;
+    setInRest(true);
+    setRestLeft(Math.max(1, peek.restSeconds || restPreference));
     setRestKind(peek.isRoundRest ? "round" : "move");
     setTimerRunning(false);
     setWorkLeft(0);
@@ -327,23 +336,27 @@ function WorkoutPage() {
   ]);
 
   useEffect(() => {
-    if (restLeft > 0) {
-      setTimerRunning(false);
+    if (inRest && restLeft > 0) {
+      restWasActive.current = true;
       return;
     }
-    if (!restPending.current) return;
-    restPending.current = false;
+    if (!inRest) {
+      restWasActive.current = false;
+      return;
+    }
+    if (!restWasActive.current || restLeft > 0) return;
+    restWasActive.current = false;
+    setInRest(false);
     completeCurrentMove();
-  }, [restLeft, completeCurrentMove]);
+  }, [inRest, restLeft, completeCurrentMove]);
 
   useEffect(() => {
-    if (!isTimed || !timerRunning || workLeft > 0) return;
+    if (!isTimed || !timerRunning || workLeft > 0 || inRest) return;
     if (completingTimed.current) return;
-    if (restLeft > 0) return;
     completingTimed.current = true;
     setTimerRunning(false);
     advanceAfterMove();
-  }, [workLeft, isTimed, timerRunning, restLeft, advanceAfterMove]);
+  }, [workLeft, isTimed, timerRunning, inRest, advanceAfterMove]);
 
   const alts = useMemo(() => {
     if (!exercise) return [];
@@ -436,9 +449,11 @@ function WorkoutPage() {
   const urgent = isTimed && timerRunning && workLeft > 0 && workLeft <= 5;
 
   const handleSkip = () => {
-    restPending.current = false;
-    skipExercise(active.currentExerciseIndex);
+    setInRest(false);
     setRestLeft(0);
+    autoStarted.current = null;
+    completingTimed.current = false;
+    skipExercise(active.currentExerciseIndex);
     setTimerRunning(false);
     skipLock.current = true;
     fireTrashTalk("skip", { force: true, holdMs: 4500 });
@@ -456,27 +471,46 @@ function WorkoutPage() {
     const next = getExercise(newId);
     swapExercise(active.currentExerciseIndex, newId);
     setSwapOpen(false);
+    setInRest(false);
     setRestLeft(0);
     autoStarted.current = null;
     toast.success(`Swapped for ${next?.name ?? "alternative"}`);
   };
 
   const handleDone = () => {
-    if (current.skipped || restLeft > 0) return;
+    if (current.skipped || inRest) return;
     setTimerRunning(false);
     advanceAfterMove();
   };
 
-  const displayExercise = restLeft > 0 && nextExercise ? nextExercise : exercise;
+  const handlePrevious = () => {
+    if (!active) return;
+    const target = inRest
+      ? active.currentExerciseIndex
+      : active.currentExerciseIndex - 1;
+    if (target < 0) return;
+    setInRest(false);
+    setRestLeft(0);
+    setTimerRunning(false);
+    setPaused(false);
+    autoStarted.current = null;
+    completingTimed.current = false;
+    reopenMove(target);
+  };
+
+  const displayExercise = inRest && nextExercise ? nextExercise : exercise;
   const togglePause = () => {
     setPaused((p) => !p);
-    if (isTimed) setTimerRunning((r) => !r);
+    if (isTimed && !inRest) setTimerRunning((r) => !r);
   };
+  const canGoPrevious =
+    Boolean(active) &&
+    (inRest ? active.currentExerciseIndex >= 0 : active.currentExerciseIndex > 0);
 
   return (
     <div
       className={cn(
-        "mx-auto flex h-full min-h-0 w-full max-w-lg flex-col overflow-hidden px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
+        "mx-auto flex h-full max-h-dvh min-h-0 w-full max-w-lg flex-col overflow-hidden px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]",
         phase === "warmup" && "workout-phase-warmup",
         phase === "work" && "workout-phase-work",
         phase === "cooldown" && "workout-phase-cool",
@@ -509,17 +543,17 @@ function WorkoutPage() {
 
       <Progress value={progress} className="mt-2 h-1.5 shrink-0" />
 
-      <div className="min-h-0 flex-1 py-2">
+      <div className="mx-auto mt-2 w-full shrink-0 overflow-hidden rounded-[var(--radius-xl)] bg-black aspect-[16/10] max-h-[min(42dvh,340px)]">
         <ExerciseMedia
           exercise={displayExercise}
-          className="h-full"
+          className="h-full rounded-none border-0"
           compact
           fill
-          playing={!paused && restLeft <= 0}
+          playing={!paused && !inRest}
           showPlaybackToggle={false}
           overlay={
             <>
-              {goFlash && restLeft <= 0 && (
+              {goFlash && !inRest && (
                 <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
                   <span className="go-stamp font-display text-7xl font-black tracking-tight text-white drop-shadow-[0_4px_24px_rgba(0,0,0,0.65)]">
                     GO
@@ -538,8 +572,8 @@ function WorkoutPage() {
         />
       </div>
 
-      <div className="shrink-0 space-y-2">
-      {restLeft > 0 ? (
+      <div className="mt-auto shrink-0 space-y-2 pt-2">
+      {inRest ? (
         <div className="flex flex-col items-center gap-2 rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-3 text-center">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-subtle)]">
             {restKind === "round" ? "Round rest" : "Rest"}
@@ -564,9 +598,17 @@ function WorkoutPage() {
               </Button>
             ))}
           </div>
-          <Button className="w-full" onClick={() => setRestLeft(0)}>
-            Skip rest
-          </Button>
+          <div className="grid w-full grid-cols-2 gap-2">
+            <Button
+              variant="secondary"
+              onClick={handlePrevious}
+              disabled={!canGoPrevious}
+            >
+              <SkipBack className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button onClick={() => setRestLeft(0)}>Skip rest</Button>
+          </div>
         </div>
       ) : (
         <div className="space-y-2">
@@ -607,14 +649,21 @@ function WorkoutPage() {
             </div>
           </div>
 
-          <div className="flex gap-2">
-            <Button variant="secondary" className="flex-1" onClick={handleSkip}>
+          <div className="grid grid-cols-3 gap-2">
+            <Button
+              variant="secondary"
+              onClick={handlePrevious}
+              disabled={!canGoPrevious}
+            >
+              <SkipBack className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button variant="secondary" onClick={handleSkip}>
               <SkipForward className="h-4 w-4" />
               Skip
             </Button>
             <Button
               variant="secondary"
-              className="flex-1"
               onClick={() => setSwapOpen(true)}
               disabled={!alts.length}
             >

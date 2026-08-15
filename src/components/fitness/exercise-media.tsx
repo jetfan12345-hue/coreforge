@@ -78,12 +78,12 @@ export function ExerciseMedia({
   }, [playing, cues.length]);
 
   return (
-    <div className={cn("space-y-3", fill && "flex h-full min-h-0 flex-col space-y-0")}
+    <div className={cn("space-y-3", fill && "h-full min-h-0 space-y-0")}
     >
       <div
         className={cn(
           "overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-black",
-          fill && "flex h-full min-h-0 flex-col",
+          fill && "h-full",
           className,
         )}
       >
@@ -91,7 +91,7 @@ export function ExerciseMedia({
           data-testid="demo-card"
           className={cn(
             "relative w-full bg-black",
-            fill ? "min-h-0 flex-1" : "aspect-[4/5]",
+            fill ? "h-full min-h-0" : "aspect-[4/5]",
           )}
         >
           {imgSrc ? (
