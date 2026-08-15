@@ -74,6 +74,7 @@ function WorkoutPage() {
   const [swapOpen, setSwapOpen] = useState(false);
   const [workLeft, setWorkLeft] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [coachLine, setCoachLine] = useState<string | null>(null);
   const [goFlash, setGoFlash] = useState(false);
   const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
@@ -170,6 +171,7 @@ function WorkoutPage() {
     const key = `${active.currentExerciseIndex}-${exercise.id}`;
     if (autoStarted.current === key) return;
     autoStarted.current = key;
+    setPaused(false);
     if (isTimed && restLeft <= 0) {
       const sec = current.sets[0]?.seconds || exercise.defaultSeconds || 30;
       setWorkLeft(sec);
@@ -371,7 +373,6 @@ function WorkoutPage() {
   const urgent = isTimed && timerRunning && workLeft > 0 && workLeft <= 5;
 
   const handleSkip = () => {
-    const name = exercise.name;
     skipExercise(active.currentExerciseIndex);
     setRestLeft(0);
     setTimerRunning(false);
@@ -385,9 +386,6 @@ function WorkoutPage() {
       finishSession();
       return;
     }
-    toast.message(`Skipped ${name}`, {
-      description: "Move on — you can finish without it.",
-    });
   };
 
   const handleSwap = (newId: string) => {
@@ -455,6 +453,8 @@ function WorkoutPage() {
         exercise={exercise}
         className=""
         compact
+        playing={!paused && restLeft <= 0}
+        showPlaybackToggle={false}
         overlay={
           <>
             {goFlash && restLeft <= 0 && (
@@ -525,7 +525,10 @@ function WorkoutPage() {
                 <Button
                   variant="secondary"
                   className="flex-1"
-                  onClick={() => setTimerRunning((r) => !r)}
+                  onClick={() => {
+                    setPaused((p) => !p);
+                    setTimerRunning((r) => !r);
+                  }}
                 >
                   {timerRunning ? (
                     <>

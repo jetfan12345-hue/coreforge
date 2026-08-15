@@ -60,6 +60,12 @@ await page.waitForTimeout(1800);
 const card = page.getByTestId("demo-card");
 assertCard(await card.boundingBox(), "video");
 const videoSrc = await page.locator("video").first().getAttribute("src");
+const pauseButtons = page.getByRole("button", { name: /^pause$/i });
+const pauseCount = await pauseButtons.count();
+if (pauseCount !== 1) {
+  console.error("expected one Pause control", pauseCount);
+  process.exit(1);
+}
 await page.screenshot({ path: "/workspace/screenshots/workout-jacks-phone.png" });
 
 await page.getByRole("button", { name: /^skip$/i }).click();
@@ -68,6 +74,10 @@ await page.screenshot({ path: "/workspace/screenshots/workout-climber-phone.png"
 const climberName = await page.locator("body").innerText();
 if (!/Mountain Climber/i.test(climberName)) {
   console.error("did not reach mountain climber", climberName.slice(0, 240));
+  process.exit(1);
+}
+if (/Skipped /i.test(climberName)) {
+  console.error("skip toast still on screen", climberName.slice(0, 300));
   process.exit(1);
 }
 

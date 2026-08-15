@@ -13,19 +13,29 @@ export function ExerciseMedia({
   autoPlay = true,
   compact = false,
   overlay,
+  playing: playingProp,
+  showPlaybackToggle = true,
 }: {
   exercise: Exercise;
   className?: string;
   autoPlay?: boolean;
   compact?: boolean;
   overlay?: ReactNode;
+  /** When set, the parent owns play/pause (one Pause in the workout player). */
+  playing?: boolean;
+  showPlaybackToggle?: boolean;
 }) {
   const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "female");
   const media = useMemo(
     () => resolveExerciseMedia(exercise, demoModel),
     [exercise, demoModel],
   );
-  const [playing, setPlaying] = useState(autoPlay);
+  const [internalPlaying, setInternalPlaying] = useState(autoPlay);
+  const playing = playingProp ?? internalPlaying;
+  const setPlaying = (next: boolean | ((prev: boolean) => boolean)) => {
+    const value = typeof next === "function" ? next(playing) : next;
+    if (playingProp === undefined) setInternalPlaying(value);
+  };
   const [cueIndex, setCueIndex] = useState(0);
   const [imgSrc, setImgSrc] = useState(media.image);
   const [videoSrc, setVideoSrc] = useState(media.video);
@@ -43,8 +53,8 @@ export function ExerciseMedia({
     setVideoSrc(media.video);
     setUseVideo(Boolean(media.video));
     setVideoReady(false);
-    setPlaying(autoPlay);
-  }, [exercise.id, media.image, media.video, autoPlay]);
+    if (playingProp === undefined) setInternalPlaying(autoPlay);
+  }, [exercise.id, media.image, media.video, autoPlay, playingProp]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -164,14 +174,16 @@ export function ExerciseMedia({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              size="icon-sm"
-              variant="secondary"
-              onClick={() => setPlaying((p) => !p)}
-              aria-label={playing ? "Pause demo" : "Play demo"}
-            >
-              {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-            </Button>
+            {showPlaybackToggle && (
+              <Button
+                size="icon-sm"
+                variant="secondary"
+                onClick={() => setPlaying((p) => !p)}
+                aria-label={playing ? "Pause demo" : "Play demo"}
+              >
+                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+            )}
             <Button
               size="icon-sm"
               variant="secondary"

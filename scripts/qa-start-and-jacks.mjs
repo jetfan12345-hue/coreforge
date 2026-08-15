@@ -53,6 +53,17 @@ if (!/Start circuit/i.test(homeText) || !/Month 1/i.test(homeText)) {
   console.error("home missing Start / Month 1", homeText.slice(0, 400));
   process.exit(1);
 }
+const homeClutter = [
+  /Hey Athlete/i,
+  /Train your core/i,
+  /Today’s session/i,
+  /heel reach/i,
+  /\bTODAY\b[\s\S]{0,20}0 cal/i,
+].filter((re) => re.test(homeText));
+if (homeClutter.length) {
+  console.error("home still cluttered", homeClutter.map(String), homeText.slice(0, 500));
+  process.exit(1);
+}
 
 await page.getByRole("navigation").getByRole("link", { name: /^you$/i }).click();
 await page.waitForTimeout(500);

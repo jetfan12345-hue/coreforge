@@ -195,20 +195,14 @@ function HomePage() {
           ? "Advanced"
           : "Custom";
 
+  const showScoreboard =
+    stats.sessions > 0 ||
+    stats.todayCals > 0 ||
+    stats.weekCals > 0 ||
+    streak > 0;
+
   return (
     <div className="space-y-6">
-      <section>
-        <p className="text-sm text-[var(--color-muted)]">
-          {profile.name ? `Hey ${profile.name}` : "Hey there"}
-          <span className="text-[var(--color-subtle)]">
-            {streak > 0 ? ` · ${streak}-day streak` : " · pick a level and start"}
-          </span>
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-          Train your core
-        </h1>
-      </section>
-
       {active && (
         <Button asChild className="w-full" size="lg">
           <Link to="/workout">
@@ -219,15 +213,6 @@ function HomePage() {
       )}
 
       <section className="space-y-3">
-        <div>
-          <h2 className="font-display text-lg font-semibold tracking-tight">
-            Today’s session
-          </h2>
-          <p className="text-xs text-[var(--color-muted)]">
-            Month 1 · Month 2 · Advanced. Extra settings live in You.
-          </p>
-        </div>
-
         <Tabs value={tab} onValueChange={(v) => setTab(v as ProgramId)}>
           <TabsList className="grid h-auto w-full grid-cols-4 gap-1 p-1">
             {(
@@ -257,11 +242,11 @@ function HomePage() {
               className="h-14 w-14 shrink-0 rounded-[var(--radius-md)] object-cover object-[center_18%]"
             />
             <div className="min-w-0 flex-1">
-              <h3 className="font-display text-lg font-semibold tracking-tight">
+              <h1 className="font-display text-lg font-semibold tracking-tight">
                 {tab === "custom"
                   ? "Your custom circuit"
                   : activeProgram?.name}
-              </h3>
+              </h1>
               <p className="text-xs text-[var(--color-muted)]">
                 {tab === "custom"
                   ? "Build your own — optional"
@@ -281,39 +266,15 @@ function HomePage() {
               Start circuit
               <ArrowRight className="h-5 w-5" />
             </Button>
-            {tab !== "custom" && (
-              <p className="text-sm text-[var(--color-muted)]">
-                {weekMeta?.trains ?? activeProgram?.description}
-              </p>
-            )}
             {!slots.length && tab === "custom" && (
               <p className="text-center text-xs text-[var(--color-muted)]">
                 Pick at least one move for your circuit.
               </p>
             )}
 
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-[var(--color-subtle)]">
-                  Warm-up
-                </p>
-                <p className="font-display text-sm font-semibold">2 moves</p>
-              </div>
-              <div className="rounded-[var(--radius-md)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-2 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-[var(--color-primary)]">
-                  Circuit
-                </p>
-                <p className="font-display text-sm font-semibold text-[var(--color-primary)]">
-                  {summary.workPerRound || 6} × {rounds}
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-[var(--color-subtle)]">
-                  Cooldown
-                </p>
-                <p className="font-display text-sm font-semibold">2 stretches</p>
-              </div>
-            </div>
+            <p className="pointer-events-none text-center text-xs text-[var(--color-subtle)]">
+              Warm-up 2 · Circuit {summary.workPerRound || 6}×{rounds} · Cooldown 2
+            </p>
 
             {tab === "custom" && (
               <div className="space-y-3">
@@ -444,14 +405,16 @@ function HomePage() {
         </div>
       </section>
 
-      <StatsRow
-        items={[
-          { label: "Today", value: `${stats.todayCals} cal`, icon: "flame" },
-          { label: "This week", value: `${stats.weekCals}`, icon: "trend" },
-          { label: "Streak", value: `${streak}d`, icon: "calendar" },
-          { label: "Sessions", value: String(stats.sessions), icon: "dumbbell" },
-        ]}
-      />
+      {showScoreboard && (
+        <StatsRow
+          items={[
+            { label: "Today", value: `${stats.todayCals} cal`, icon: "flame" },
+            { label: "This week", value: `${stats.weekCals}`, icon: "trend" },
+            { label: "Streak", value: `${streak}d`, icon: "calendar" },
+            { label: "Sessions", value: String(stats.sessions), icon: "dumbbell" },
+          ]}
+        />
+      )}
 
       <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
