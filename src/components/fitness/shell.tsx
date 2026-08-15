@@ -11,18 +11,34 @@ const nav = [
   { to: "/profile", label: "You", icon: UserRound },
 ] as const;
 
+function routePath(pathname: string, hash: string): string {
+  const fromHash = hash.replace(/^#/, "").split("?")[0];
+  let raw = fromHash.startsWith("/") ? fromHash : pathname;
+  raw = raw.replace(/\/+$/, "") || "/";
+  if (raw === "/coreforge" || raw.startsWith("/coreforge/")) {
+    raw = raw.slice("/coreforge".length) || "/";
+  }
+  return raw;
+}
+
+function tabIsActive(path: string, to: string): boolean {
+  if (to === "/") return path === "/";
+  return path === to || path.startsWith(`${to}/`);
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const location = useRouterState({ select: (s) => s.location });
+  const path = routePath(location.pathname, location.hash);
   const active = useFitnessStore((s) => s.active);
   const onboarded = useFitnessStore((s) => s.profile.onboarded);
-  const cinema = pathname === "/workout" || !onboarded;
+  const cinema = path === "/workout" || !onboarded;
 
   return (
     <div className="mesh-bg min-h-dvh">
       <div
         className={cn(
-          "mx-auto flex min-h-dvh w-full max-w-lg flex-col md:max-w-3xl",
-          cinema ? "px-0 pt-0" : "px-4 pt-4 md:px-6",
+          "mx-auto flex w-full max-w-lg flex-col md:max-w-3xl",
+          cinema ? "h-dvh overflow-hidden px-0 pt-0" : "min-h-dvh px-4 pt-4 md:px-6",
         )}
       >
         {!cinema && (
@@ -49,20 +65,26 @@ export function AppShell({ children }: { children: ReactNode }) {
         </header>
         )}
 
-        <main className={cn("flex-1", cinema ? "pb-4" : "pb-28")}>{children}</main>
+        <main
+          className={cn(
+            "flex-1",
+            cinema ? "flex min-h-0 flex-col overflow-hidden" : "pb-28",
+          )}
+        >
+          {children}
+        </main>
 
         {!cinema && (
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--color-border)] bg-[color-mix(in_oklab,var(--color-bg)_92%,transparent)] backdrop-blur-md safe-pb">
           <div className="mx-auto grid max-w-lg grid-cols-4 gap-1 px-2 py-2 md:max-w-3xl">
             {nav.map(({ to, label, icon: Icon }) => {
-              const isActive =
-                to === "/"
-                  ? pathname === "/"
-                  : pathname === to || pathname.startsWith(`${to}/`);
+              const isActive = tabIsActive(path, to);
               return (
                 <Link
                   key={to}
                   to={to}
+                  activeOptions={{ exact: to === "/" }}
+                  aria-current={isActive ? "page" : undefined}
                   className={cn(
                     "flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-[var(--radius-md)] text-[11px] font-medium transition-colors",
                     isActive
