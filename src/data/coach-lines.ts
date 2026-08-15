@@ -1,3 +1,5 @@
+import { publicUrl } from "@/lib/public-url";
+
 export type CoachLineKind =
   | "work"
   | "rest"
@@ -13,9 +15,14 @@ export type CoachLine = {
   kind: CoachLineKind;
 };
 
+/** Ara TTS clip for a line id. Missing files must not fail the build. */
+export function coachAudioUrl(id: string): string {
+  return publicUrl(`/audio/coach/${id}.mp3`);
+}
+
 /**
  * Female-coach on-screen library. Voice: mean-funny, not corporate gym-bro.
- * Audio is not the product — if a clip sounds robotic or male, do not play it.
+ * Playback uses public/audio/coach/{id}.mp3 (ara) only — never the old line-NN clips.
  */
 export const COACH_LINES: CoachLine[] = [
   // —— mid-set bite ——

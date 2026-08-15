@@ -18,6 +18,7 @@ import {
   pickFinishLine,
   type CoachLineKind,
 } from "@/data/coach-lines";
+import { playCoachLineById, stopCoachAudio } from "@/lib/coach-audio";
 import { ExerciseMedia } from "@/components/fitness/exercise-media";
 import { ConfettiBurst } from "@/components/fitness/confetti";
 import { Button } from "@/components/ui/button";
@@ -100,18 +101,28 @@ function WorkoutPage() {
 
   const fireTrashTalk = useCallback(
     (kind: CoachLineKind = "work", opts?: { force?: boolean; holdMs?: number }) => {
-      if (!trashEnabled) return;
+      if (!trashEnabled) {
+        stopCoachAudio();
+        return;
+      }
       const now = Date.now();
       if (!opts?.force && now - trashAt.current < 7_000) return;
       trashAt.current = now;
       const line = pickCoachLine(kind);
       setCoachLine(line.text);
+      playCoachLineById(line.id);
       window.setTimeout(() => {
         setCoachLine((cur) => (cur === line.text ? null : cur));
       }, opts?.holdMs ?? 4200);
     },
     [trashEnabled],
   );
+
+  useEffect(() => {
+    if (!trashEnabled) stopCoachAudio();
+  }, [trashEnabled]);
+
+  useEffect(() => () => stopCoachAudio(), []);
 
   const progress = useMemo(() => {
     if (!active) return 0;
@@ -216,6 +227,7 @@ function WorkoutPage() {
     toast.dismiss();
     if (trashEnabled) {
       const closer = pickFinishLine(streak);
+      playCoachLineById(closer.id);
       setCelebrate({
         calories: result?.totalCalories ?? liveCals,
         streak,

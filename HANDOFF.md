@@ -27,7 +27,7 @@ Gear-aware **Advanced overload only**: barbell / plates / cable / pull-up bar / 
 - **Off by default.** Female coach only when it is on. Same funny/mean library in `src/data/coach-lines.ts`.
 - Default chrome, Home, onboarding, and player: clean / professional. No roast copy in your face.
 - “Forge / don’t be a pussy” stays **only** inside optional coach lines, never default UI.
-- Toggle lives in **You** (and Enter some details). `src/lib/coach-audio.ts` is a no-op — do not play MP3s.
+- Toggle lives in **You** (and Enter some details). When on + Female, play `public/audio/coach/{id}.mp3` (ara, ids from `coach-lines.ts`) via `coachAudioUrl` / `playCoachLineById`. Missing files → text only. Never play old `line-NN.mp3` clips. Male or roast off → silence.
 
 ## Circuits (balanced 6)
 
@@ -87,7 +87,7 @@ Media lives in `public/exercises/{id}.jpg|.mp4` (female) and `public/exercises/m
 - Lasting URL: **https://jetfan12345-hue.github.io/coreforge/** — `npm run build:pages` + `.github/workflows/pages.yml` publishes `gh-pages`. GitHub blocks apps from *enabling* Pages; once the repo owner sets Settings → Pages → source **GitHub Actions** or branch **gh-pages**, that URL is the app. Nested routes use hash (`#/workout`). `npm run dev` / Vercel nitro build are unchanged.
 - Persist profile in Zustand (`src/store/fitness.ts`). `demoModel` and `coachTrashTalk` merge on rehydrate. Default `coachTrashTalk: false`.
 - `resolveExerciseMedia()` switches male/female paths.
-- Workout player is cinema mode (no bottom nav). Coach lines overlay the demo **only when trash talk is on**. `src/lib/coach-audio.ts` is a no-op on purpose.
+- Workout player is cinema mode (no bottom nav). Coach lines overlay the demo **only when trash talk is on**, and the matching ara clip plays if that `{id}.mp3` exists.
 - Do not re-scaffold. Edit in place. Leave the dev server running.
 - Do **not** deploy to ZeroDeploy from this workspace.
 

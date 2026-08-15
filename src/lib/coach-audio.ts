@@ -1,19 +1,53 @@
+import { coachAudioUrl } from "@/data/coach-lines";
+
 /**
- * Trash talk is on-screen text. Do not play MP3s — clips that sound
- * robotic or male break the female-coach product. These stay as no-ops
- * so leftover callers cannot sneak audio back in.
+ * Play id-named ara trash-talk clips from /audio/coach/{id}.mp3.
+ * Never uses the old robotic line-NN.mp3 files.
+ * Missing / 404 clips stay silent — text still shows. No console spam.
  */
 
-export function unlockCoachAudio(): void {}
+let current: HTMLAudioElement | null = null;
+let playGen = 0;
 
-export function isCoachAudioUnlocked(): boolean {
-  return true;
+function releaseCurrent() {
+  if (!current) return;
+  current.onerror = null;
+  current.onended = null;
+  current.pause();
+  current.removeAttribute("src");
+  try {
+    current.load();
+  } catch {
+    /* ignore */
+  }
+  current = null;
 }
 
-export async function preloadCoachAudio(): Promise<void> {}
-
-export function playCoachLine(_index?: number): Promise<void> {
-  return Promise.resolve();
+export function stopCoachAudio() {
+  playGen += 1;
+  releaseCurrent();
 }
 
-export function playCoachSample(): void {}
+export function playCoachLineById(id: string) {
+  if (typeof window === "undefined" || !id) return;
+  playGen += 1;
+  const generation = playGen;
+  releaseCurrent();
+
+  const audio = new Audio();
+  audio.preload = "auto";
+  audio.onerror = () => {
+    if (generation !== playGen) return;
+    releaseCurrent();
+  };
+  audio.onended = () => {
+    if (generation !== playGen) return;
+    releaseCurrent();
+  };
+  audio.src = coachAudioUrl(id);
+  current = audio;
+  void audio.play().catch(() => {
+    if (generation !== playGen) return;
+    releaseCurrent();
+  });
+}
