@@ -30,6 +30,7 @@ export function ExerciseMedia({
   const [imgSrc, setImgSrc] = useState(media.image);
   const [videoSrc, setVideoSrc] = useState(media.video);
   const [useVideo, setUseVideo] = useState(Boolean(media.video));
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const cues = exercise.cues;
@@ -41,6 +42,7 @@ export function ExerciseMedia({
     setImgSrc(media.image);
     setVideoSrc(media.video);
     setUseVideo(Boolean(media.video));
+    setVideoReady(false);
     setPlaying(autoPlay);
   }, [exercise.id, media.image, media.video, autoPlay]);
 
@@ -70,62 +72,69 @@ export function ExerciseMedia({
           className,
         )}
       >
-        <div className="flex justify-center bg-black">
-          <div className="relative aspect-[9/16] h-[min(52dvh,480px)] max-w-full">
-            {useVideo && videoSrc ? (
-              <video
-                key={videoSrc}
-                ref={videoRef}
-                className="h-full w-full object-contain object-center"
-                src={videoSrc}
-                poster={imgSrc}
-                autoPlay={playing}
-                muted
-                loop
-                playsInline
-                onError={() => {
-                  if (videoSrc !== media.femaleVideo && media.femaleVideo) {
-                    setVideoSrc(media.femaleVideo);
-                    setImgSrc(media.femaleImage);
-                  } else {
-                    setUseVideo(false);
-                  }
-                }}
-              />
-            ) : imgSrc ? (
-              <img
-                src={imgSrc}
-                alt={`${exercise.name} demonstration`}
-                className="h-full w-full object-contain object-center"
-                onError={() => {
-                  if (imgSrc !== media.femaleImage) {
-                    setImgSrc(media.femaleImage);
-                  } else {
-                    setImgSrc("");
-                  }
-                }}
-              />
-            ) : (
-              <div
-                className="flex h-full w-full items-center justify-center"
-                style={{ background: gradient }}
-              >
-                <FormSilhouette exerciseId={exercise.id} />
-              </div>
-            )}
-
-            {overlay}
-
-            <div className="pointer-events-none absolute left-2 top-2 flex flex-wrap gap-2">
-              <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/90 backdrop-blur-sm">
-                {useVideo ? "Full-ROM loop" : "Demo"}
-              </span>
-              {exercise.weighted && (
-                <span className="rounded-full bg-[var(--color-accent)]/90 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-accent-fg)]">
-                  Weighted
-                </span>
-              )}
+        <div className="relative w-full aspect-[4/5] bg-[var(--color-surface-2)]">
+          {imgSrc ? (
+            <img
+              src={imgSrc}
+              alt={`${exercise.name} demonstration`}
+              className="absolute inset-0 h-full w-full object-cover object-center"
+              onError={() => {
+                if (imgSrc !== media.femaleImage) {
+                  setImgSrc(media.femaleImage);
+                } else {
+                  setImgSrc("");
+                }
+              }}
+            />
+          ) : (
+            <div
+              className="absolute inset-0 flex items-center justify-center"
+              style={{ background: gradient }}
+            >
+              <FormSilhouette exerciseId={exercise.id} />
             </div>
+          )}
+
+          {useVideo && videoSrc ? (
+            <video
+              key={videoSrc}
+              ref={videoRef}
+              className={cn(
+                "absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200",
+                videoReady ? "opacity-100" : "opacity-0",
+              )}
+              src={videoSrc}
+              poster={imgSrc}
+              autoPlay={playing}
+              muted
+              loop
+              playsInline
+              preload="auto"
+              onLoadedData={() => setVideoReady(true)}
+              onCanPlay={() => setVideoReady(true)}
+              onError={() => {
+                setVideoReady(false);
+                if (videoSrc !== media.femaleVideo && media.femaleVideo) {
+                  setVideoSrc(media.femaleVideo);
+                  setImgSrc(media.femaleImage);
+                } else {
+                  setUseVideo(false);
+                }
+              }}
+            />
+          ) : null}
+
+          {overlay}
+
+          <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-wrap gap-2">
+            <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/90 backdrop-blur-sm">
+              {useVideo && videoReady ? "Full-ROM loop" : "Demo"}
+            </span>
+            {exercise.weighted && (
+              <span className="rounded-full bg-[var(--color-accent)]/90 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-accent-fg)]">
+                Weighted
+              </span>
+            )}
           </div>
         </div>
 
