@@ -92,6 +92,16 @@ export interface ActiveWorkout {
   circuitMode: boolean;
 }
 
+/** True when an in-progress circuit can be continued (not an empty leftover). */
+export function isResumableSession(active: ActiveWorkout | null): boolean {
+  if (!active?.exercises?.length) return false;
+  const idx = active.currentExerciseIndex;
+  if (idx < 0 || idx >= active.exercises.length) return false;
+  return active.exercises.some(
+    (ex) => !ex.skipped && ex.sets.some((s) => !s.done),
+  );
+}
+
 interface FitnessState {
   profile: UserProfile;
   history: DayWorkout[];

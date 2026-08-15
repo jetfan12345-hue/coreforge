@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { CalendarDays, Dumbbell, Home, UserRound, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useFitnessStore } from "@/store/fitness";
+import { isResumableSession, useFitnessStore } from "@/store/fitness";
 
 const nav = [
   { to: "/", label: "Home", icon: Home },
@@ -32,6 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const active = useFitnessStore((s) => s.active);
   const onboarded = useFitnessStore((s) => s.profile.onboarded);
   const cinema = path === "/workout" || !onboarded;
+  const showHeaderResume = isResumableSession(active) && path !== "/";
 
   return (
     <div className="mesh-bg min-h-dvh">
@@ -54,7 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <div className="text-xs text-[var(--color-subtle)]">Abs first. Progress daily.</div>
             </div>
           </Link>
-          {active && (
+          {showHeaderResume && (
             <Link
               to="/workout"
               className="rounded-full border border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10 px-3 py-1.5 text-xs font-medium text-[var(--color-primary)]"

@@ -54,7 +54,7 @@ export interface Exercise {
 
 import { publicUrl } from "@/lib/public-url";
 
-const V = 26;
+const V = 27;
 
 function media(id: string) {
   return {
