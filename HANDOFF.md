@@ -75,7 +75,7 @@ Do **not** put left and right side-plank hip dip as two circuit slots. Do **not*
 
 Audited 2026-08-13. Penguin is a distinct heel-reach demo. Dead bug, flutter kick, reverse crunch, V-up, plank shoulder tap, and plank hip dip were rebuilt so the *motion* matches the cues. Crunch ROM and hollow hold were verified. Male coach covers the beginner circuit (incl. dead bug, penguin, prone T).
 
-Demos are ~**6s**, **whole person in frame** (jumping jacks: arms and all). Player is height-driven 9:16 `object-contain` — do not crop the body with overlays.
+Demos are ~**6s**, **whole person in frame** (jumping jacks: arms and all, ~5% headroom). Player is a **full-width 4:5 card**: still paints first, video fades on top when ready. Do not go back to a height-capped 9:16 letterbox.
 
 Media lives in `public/exercises/{id}.jpg|.mp4` (female) and `public/exercises/male/` (male, incomplete beyond beginner — UI falls back to female on 404). Cache-bust with the `V` constant in `src/data/exercises.ts`.
 

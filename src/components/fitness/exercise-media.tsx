@@ -72,7 +72,10 @@ export function ExerciseMedia({
           className,
         )}
       >
-        <div className="relative w-full aspect-[4/5] bg-[var(--color-surface-2)]">
+        <div
+          data-testid="demo-card"
+          className="relative w-full aspect-[4/5] bg-[var(--color-surface-2)]"
+        >
           {imgSrc ? (
             <img
               src={imgSrc}
