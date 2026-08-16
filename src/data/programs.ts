@@ -81,7 +81,7 @@ export const ROUND_REST_SECONDS = 30;
 export const programs: Program[] = [
   {
     id: "beginner",
-    name: "Month 1",
+    name: "Month 1 · Beginner",
     tagline: "About 10–15 min · 6 floor moves",
     description:
       "Warm-up, six balanced core moves, then stretch. Two rounds at first, three later. No gear.",
