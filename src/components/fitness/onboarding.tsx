@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Check, Dumbbell, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
 import {
   EMPTY_GEAR,
   GEAR_OPTIONS,
+  buildSessionSlots,
   type GearKit,
 } from "@/data/programs";
 import { CoachPresence } from "@/components/fitness/coach-presence";
@@ -23,7 +25,9 @@ import { cn } from "@/lib/utils";
 type Gate = "start" | "details";
 
 export function Onboarding() {
+  const navigate = useNavigate();
   const complete = useFitnessStore((s) => s.completeOnboarding);
+  const startSession = useFitnessStore((s) => s.startSession);
   const existing = useFitnessStore((s) => s.profile);
   const [gate, setGate] = useState<Gate>("start");
   const [form, setForm] = useState<UserProfile>({
@@ -69,6 +73,15 @@ export function Onboarding() {
         : Boolean(form.coachTrashTalk),
       programStartedAt: new Date().toISOString().slice(0, 10),
     });
+    const slots = buildSessionSlots("beginner", {
+      week: 1,
+      gear: opts.floor ? { ...EMPTY_GEAR } : form.gear,
+      includeGearOverload: opts.floor ? true : form.includeGearOverload,
+    });
+    if (slots.length) {
+      startSession(slots, { programId: "beginner" });
+      void navigate({ to: "/workout" });
+    }
   };
 
   if (gate === "start") {

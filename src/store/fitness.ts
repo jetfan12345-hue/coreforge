@@ -90,6 +90,23 @@ export interface ActiveWorkout {
   programId?: string;
   /** Circuit / follow-along session */
   circuitMode: boolean;
+  /** Set when the player actually mounts — leftover startSession drafts are not resumable. */
+  begun?: boolean;
+}
+
+/** True when an in-progress circuit can be continued (not an empty leftover). */
+export function isResumableSession(active: ActiveWorkout | null): boolean {
+  if (!active?.exercises?.length) return false;
+  const idx = active.currentExerciseIndex;
+  if (idx < 0 || idx >= active.exercises.length) return false;
+  const hasRemaining = active.exercises.some(
+    (ex) => !ex.skipped && ex.sets.some((s) => !s.done),
+  );
+  if (!hasRemaining) return false;
+  const hasProgress =
+    idx > 0 ||
+    active.exercises.some((ex) => ex.skipped || ex.sets.some((s) => s.done));
+  return Boolean(active.begun) || hasProgress;
 }
 
 interface FitnessState {
@@ -129,6 +146,9 @@ interface FitnessState {
     isRoundRest: boolean;
   } | null;
   setCurrentExercise: (index: number) => void;
+  markSessionBegun: () => void;
+  /** Jump back to a move and clear done/skipped so it can be redone. */
+  reopenMove: (index: number) => void;
   addSet: (exerciseIndex: number) => void;
   skipExercise: (exerciseIndex?: number) => void;
   swapExercise: (exerciseIndex: number, newExerciseId: string) => void;
@@ -335,6 +355,7 @@ export const useFitnessStore = create<FitnessState>()(
             currentExerciseIndex: 0,
             programId: opts?.programId,
             circuitMode,
+            begun: false,
           },
         });
       },
@@ -349,6 +370,7 @@ export const useFitnessStore = create<FitnessState>()(
             currentExerciseIndex: 0,
             programId: opts?.programId,
             circuitMode: true,
+            begun: false,
           },
         });
       },
@@ -427,6 +449,35 @@ export const useFitnessStore = create<FitnessState>()(
             ? { active: { ...s.active, currentExerciseIndex: index } }
             : s,
         ),
+
+      markSessionBegun: () =>
+        set((s) =>
+          s.active && !s.active.begun
+            ? { active: { ...s.active, begun: true } }
+            : s,
+        ),
+
+      reopenMove: (index) =>
+        set((s) => {
+          if (!s.active) return s;
+          const i = Math.max(0, Math.min(index, s.active.exercises.length - 1));
+          const exercises = s.active.exercises.map((ex, j) =>
+            j === i
+              ? {
+                  ...ex,
+                  skipped: false,
+                  sets: ex.sets.map((st) => ({ ...st, done: false })),
+                }
+              : ex,
+          );
+          return {
+            active: {
+              ...s.active,
+              exercises,
+              currentExerciseIndex: i,
+            },
+          };
+        }),
 
       addSet: (exerciseIndex) =>
         set((s) => {

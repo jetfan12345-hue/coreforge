@@ -15,6 +15,7 @@ export function ExerciseMedia({
   overlay,
   playing: playingProp,
   showPlaybackToggle = true,
+  fill = false,
 }: {
   exercise: Exercise;
   className?: string;
@@ -24,6 +25,8 @@ export function ExerciseMedia({
   /** When set, the parent owns play/pause (one Pause in the workout player). */
   playing?: boolean;
   showPlaybackToggle?: boolean;
+  /** Fill a flex parent instead of a tall 4:5 box (follow-along player). */
+  fill?: boolean;
 }) {
   const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "female");
   const media = useMemo(
@@ -75,22 +78,27 @@ export function ExerciseMedia({
   }, [playing, cues.length]);
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", fill && "h-full min-h-0 space-y-0")}
+    >
       <div
         className={cn(
-          "overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-2)]",
+          "overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-black",
+          fill && "h-full",
           className,
         )}
       >
         <div
           data-testid="demo-card"
-          className="relative w-full aspect-[4/5] bg-[var(--color-surface-2)]"
+          className={cn(
+            "relative w-full bg-black",
+            fill ? "h-full min-h-0" : "aspect-[4/5]",
+          )}
         >
           {imgSrc ? (
             <img
               src={imgSrc}
               alt={`${exercise.name} demonstration`}
-              className="absolute inset-0 h-full w-full object-cover object-center"
+              className="absolute inset-0 h-full w-full object-contain object-center"
               onError={() => {
                 if (imgSrc !== media.femaleImage) {
                   setImgSrc(media.femaleImage);
@@ -113,7 +121,7 @@ export function ExerciseMedia({
               key={videoSrc}
               ref={videoRef}
               className={cn(
-                "absolute inset-0 h-full w-full object-cover object-center transition-opacity duration-200",
+                "absolute inset-0 h-full w-full object-contain object-center transition-opacity duration-200",
                 videoReady ? "opacity-100" : "opacity-0",
               )}
               src={videoSrc}
@@ -149,62 +157,75 @@ export function ExerciseMedia({
               </span>
             )}
           </div>
+
+          {fill && cues[cueIndex] ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2.5 pt-8">
+              <p
+                key={cueIndex}
+                className="cue-enter text-center text-sm font-semibold leading-snug text-white"
+              >
+                {cues[cueIndex]}
+              </p>
+            </div>
+          ) : null}
         </div>
 
-        <div className="border-t border-[var(--color-border)] px-3 py-2.5">
-          <div className="mb-2 min-h-[1.25rem]">
-            <p
-              key={cueIndex}
-              className="cue-enter font-display text-base font-semibold tracking-tight"
-            >
-              {cues[cueIndex]}
-            </p>
-            <div className="mt-1.5 flex gap-1">
-              {cues.map((_, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-1 flex-1 rounded-full transition-colors",
-                    i === cueIndex
-                      ? "bg-[var(--color-primary)]"
-                      : "bg-[var(--color-surface-3)]",
-                  )}
-                />
-              ))}
+        {fill ? null : (
+          <div className="border-t border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2.5">
+            <div className="mb-2 min-h-[1.25rem]">
+              <p
+                key={cueIndex}
+                className="cue-enter font-display text-base font-semibold tracking-tight"
+              >
+                {cues[cueIndex]}
+              </p>
+              <div className="mt-1.5 flex gap-1">
+                {cues.map((_, i) => (
+                  <span
+                    key={i}
+                    className={cn(
+                      "h-1 flex-1 rounded-full transition-colors",
+                      i === cueIndex
+                        ? "bg-[var(--color-primary)]"
+                        : "bg-[var(--color-surface-3)]",
+                    )}
+                  />
+                ))}
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {showPlaybackToggle && (
+            <div className="flex items-center gap-2">
+              {showPlaybackToggle && (
+                <Button
+                  size="icon-sm"
+                  variant="secondary"
+                  onClick={() => setPlaying((p) => !p)}
+                  aria-label={playing ? "Pause demo" : "Play demo"}
+                >
+                  {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </Button>
+              )}
               <Button
                 size="icon-sm"
                 variant="secondary"
-                onClick={() => setPlaying((p) => !p)}
-                aria-label={playing ? "Pause demo" : "Play demo"}
+                onClick={() => {
+                  setCueIndex(0);
+                  const el = videoRef.current;
+                  if (el) {
+                    el.currentTime = 0;
+                    if (playing) void el.play().catch(() => undefined);
+                  }
+                }}
+                aria-label="Restart demo"
               >
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                <RotateCcw className="h-4 w-4" />
               </Button>
-            )}
-            <Button
-              size="icon-sm"
-              variant="secondary"
-              onClick={() => {
-                setCueIndex(0);
-                const el = videoRef.current;
-                if (el) {
-                  el.currentTime = 0;
-                  if (playing) void el.play().catch(() => undefined);
-                }
-              }}
-              aria-label="Restart demo"
-            >
-              <RotateCcw className="h-4 w-4" />
-            </Button>
-            <span className="pointer-events-none ml-auto flex items-center gap-1.5 text-xs text-[var(--color-subtle)]">
-              <Volume2 className="h-3.5 w-3.5" />
-              Form guide
-            </span>
+              <span className="pointer-events-none ml-auto flex items-center gap-1.5 text-xs text-[var(--color-subtle)]">
+                <Volume2 className="h-3.5 w-3.5" />
+                Form guide
+              </span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {!compact && tips.length > 0 && (

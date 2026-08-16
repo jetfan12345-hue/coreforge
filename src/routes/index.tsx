@@ -29,7 +29,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { StatsRow } from "@/components/fitness/stats-row";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useFitnessStore, dateKey } from "@/store/fitness";
+import { useFitnessStore, dateKey, isResumableSession } from "@/store/fitness";
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +69,7 @@ function HomePage() {
   const startSession = useFitnessStore((s) => s.startSession);
   const bodyKg = useFitnessStore((s) => s.bodyWeightKg());
   const active = useFitnessStore((s) => s.active);
+  const canResume = isResumableSession(active);
   const streak = useFitnessStore((s) => s.streakDays());
   const today = dateKey(new Date());
 
@@ -203,7 +204,7 @@ function HomePage() {
 
   return (
     <div className="space-y-6">
-      {active && (
+      {canResume && (
         <Button asChild className="w-full" size="lg">
           <Link to="/workout">
             Resume workout
@@ -259,11 +260,12 @@ function HomePage() {
             <Button
               className="h-14 w-full text-base font-semibold"
               size="lg"
+              variant={canResume ? "secondary" : "default"}
               disabled={!slots.length}
               onClick={launch}
             >
               <Play className="h-5 w-5" />
-              Start circuit
+              {canResume ? "Start new circuit" : "Start circuit"}
               <ArrowRight className="h-5 w-5" />
             </Button>
             {!slots.length && tab === "custom" && (
