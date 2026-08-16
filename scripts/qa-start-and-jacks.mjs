@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 mkdirSync("/workspace/screenshots", { recursive: true });
 const browser = await chromium.launch({
   headless: true,
+  executablePath: "/usr/local/bin/google-chrome",
   args: ["--no-sandbox", "--disable-dev-shm-usage"],
 });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
