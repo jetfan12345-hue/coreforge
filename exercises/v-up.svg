@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1b2313"/>
+      <stop offset="100%" stop-color="#2f412f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="30%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#3dd6c6" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#3dd6c6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#g)"/>
+  <rect width="800" height="1000" fill="url(#glow)"/>
+  <g transform="translate(280.0,390.0) scale(1.1)">
+    <circle cx="120" cy="28" r="16" fill="none" stroke="#f2f3f4" stroke-width="5"/>
+    <path d="M80 130 Q120 40 160 130 M90 80 H150" fill="none" stroke="#f2f3f4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <rect x="0" y="820" width="800" height="180" fill="url(#g)" opacity="0.2"/>
+  <text x="48" y="910" font-family="system-ui,sans-serif" font-size="36" font-weight="700" fill="#f2f3f4">V-Up</text>
+  <text x="48" y="950" font-family="system-ui,sans-serif" font-size="20" fill="#9aa1a9">Full range</text>
+  
+  <circle cx="740" cy="940" r="8" fill="#3dd6c6"/>
+</svg>
