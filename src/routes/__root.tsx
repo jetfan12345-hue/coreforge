@@ -10,6 +10,7 @@ import { AppShell } from "@/components/fitness/shell";
 import { useFitnessStore } from "@/store/fitness";
 import { Onboarding } from "@/components/fitness/onboarding";
 import { ClientOnly } from "@/components/fitness/client-only";
+import { isPagesSpa } from "@/lib/public-url";
 import appCss from "@/styles.css?url";
 
 export const Route = createRootRoute({
@@ -24,7 +25,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "20 effective ab exercises, calendar tracking, and calorie estimates.",
+          "Follow-along abs workouts with full-body form demos. Open the app, start a circuit, and follow along.",
       },
       { name: "theme-color", content: "#0a0b0c" },
     ],
@@ -69,6 +70,9 @@ function AppBody() {
 }
 
 function RootDocument({ children }: Readonly<{ children: ReactNode }>) {
+  if (isPagesSpa) {
+    return <>{children}</>;
+  }
   return (
     <html lang="en">
       <head>

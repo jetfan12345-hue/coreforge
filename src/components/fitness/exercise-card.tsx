@@ -11,16 +11,20 @@ export function ExerciseCard({
   exercise,
   bodyKg,
   compact,
+  listIndex,
 }: {
   exercise: Exercise;
   bodyKg: number;
   compact?: boolean;
+  /** 1-based index in the current filtered list (hides jumpy popularRank). */
+  listIndex?: number;
 }) {
   const favorites = useFitnessStore((s) => s.favorites);
   const toggleFavorite = useFitnessStore((s) => s.toggleFavorite);
-  const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "male");
+  const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "female");
   const media = resolveExerciseMedia(exercise, demoModel);
   const [imgSrc, setImgSrc] = useState(media.image);
+  const [imgReady, setImgReady] = useState(false);
   const isFav = favorites.includes(exercise.id);
   const est = estimateExerciseCalories({
     met: exercise.met,
@@ -33,6 +37,7 @@ export function ExerciseCard({
 
   useEffect(() => {
     setImgSrc(media.image);
+    setImgReady(false);
   }, [media.image]);
 
   return (
@@ -49,30 +54,48 @@ export function ExerciseCard({
       >
         <div
           className={cn(
-            "relative overflow-hidden bg-[var(--color-surface-2)]",
+            "relative overflow-hidden bg-[var(--color-surface-3)]",
             compact
               ? "h-20 w-20 shrink-0 rounded-[var(--radius-md)]"
               : "aspect-[5/3] w-full",
           )}
+          style={{
+            backgroundImage: `url("${imgSrc}")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
         >
+          {!imgReady && (
+            <div
+              aria-hidden
+              className="absolute inset-0 animate-pulse bg-[var(--color-surface-2)]/55"
+            />
+          )}
           <img
             src={imgSrc}
-            alt=""
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-            onError={(e) => {
+            alt={`${exercise.name} demo`}
+            loading="lazy"
+            decoding="async"
+            className={cn(
+              "relative h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]",
+              imgReady ? "opacity-100" : "opacity-0",
+            )}
+            onLoad={() => setImgReady(true)}
+            onError={() => {
               if (imgSrc !== media.femaleImage) {
                 setImgSrc(media.femaleImage);
-              } else {
-                (e.target as HTMLImageElement).style.display = "none";
+                setImgReady(false);
               }
             }}
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           {!compact && (
             <div className="absolute bottom-2 left-2 flex gap-1.5">
-              <Badge variant="secondary" className="bg-black/50 text-white border-0">
-                #{exercise.popularRank}
-              </Badge>
+              {listIndex != null && (
+                <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                  #{listIndex}
+                </Badge>
+              )}
               {exercise.weighted && <Badge variant="weighted">Weighted</Badge>}
             </div>
           )}

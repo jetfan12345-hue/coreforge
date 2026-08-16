@@ -6,9 +6,9 @@ import {
   estimateBmr,
   kgFromProfile,
 } from "@/data/exercises";
-import { GEAR_OPTIONS } from "@/data/programs";
-import { TRASH_TALK_LINES } from "@/data/coach-lines";
-import { playCoachSample, unlockCoachAudio } from "@/lib/coach-audio";
+import { describeGearUnlock, GEAR_OPTIONS } from "@/data/programs";
+import { pickCoachLine } from "@/data/coach-lines";
+import { CoachPresence } from "@/components/fitness/coach-presence";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,7 +72,18 @@ function ProfilePage() {
               <button
                 key={g.key}
                 type="button"
-                onClick={() => toggleGear(g.key)}
+                onClick={() => {
+                  const nextOn = !profile.gear?.[g.key];
+                  toggleGear(g.key);
+                  const { title, moves } = describeGearUnlock(g.key);
+                  if (nextOn) {
+                    toast.success(`${title} unlocked`, {
+                      description: moves.length
+                        ? `Advanced can add ${moves.join(" · ")}`
+                        : "Logged. Advanced can layer this as overload.",
+                    });
+                  }
+                }}
                 className={cn(
                   "rounded-[var(--radius-lg)] border px-3 py-2.5 text-left text-sm transition",
                   on
@@ -95,7 +106,7 @@ function ProfilePage() {
           <CardTitle>Rest between moves</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          {[5, 10, 15, 20, 30].map((s) => (
+          {[5, 10, 15, 20].map((s) => (
             <Button
               key={s}
               size="sm"
@@ -112,98 +123,42 @@ function ProfilePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-[var(--color-primary)]" />
-            Demo coach & voice
+            Demo coach
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-[var(--color-muted)]">
-            Demo videos show proper form. Female has the full library; male
-            covers core moves and falls back to female when missing.
+            Who shows form. Male covers the beginner circuit; Female has the
+            full library. Trash talk is off unless you turn it on here.
           </p>
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                { value: "female" as const, label: "Female demos" },
-                { value: "male" as const, label: "Male demos" },
-              ] as const
-            ).map((opt) => {
-              const on = (profile.demoModel ?? "female") === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setProfile({ demoModel: opt.value })}
-                  className={cn(
-                    "rounded-[var(--radius-lg)] border px-3 py-2.5 text-left text-sm font-medium transition",
-                    on
-                      ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
-                      : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
-                  )}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              const next = !profile.coachTrashTalk;
+          <CoachPresence
+            value={profile.demoModel ?? "female"}
+            onChange={(v) => setProfile({ demoModel: v })}
+            trashTalk={profile.coachTrashTalk}
+            onTrashTalkChange={(next) => {
               setProfile({ coachTrashTalk: next });
               if (next) {
-                unlockCoachAudio();
-                playCoachSample();
-                toast.message("Coach voice on", {
-                  description: TRASH_TALK_LINES[0],
+                toast.message("Coach on", {
+                  description: pickCoachLine("work").text,
                 });
               } else {
-                toast.message("Coach voice off");
+                toast.message("Coach off");
               }
             }}
-            className={cn(
-              "flex w-full items-start gap-3 rounded-[var(--radius-lg)] border px-3 py-3 text-left text-sm transition",
-              profile.coachTrashTalk
-                ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/10"
-                : "border-[var(--color-border)] bg-[var(--color-surface-2)]",
+          />
+          {(profile.demoModel ?? "female") === "female" &&
+            profile.coachTrashTalk && (
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={() => {
+                  toast.message(pickCoachLine("work").text);
+                }}
+              >
+                Another line
+              </Button>
             )}
-          >
-            <span
-              className={cn(
-                "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border",
-                profile.coachTrashTalk
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                  : "border-[var(--color-border-strong)]",
-              )}
-            >
-              {profile.coachTrashTalk && <Check className="h-3 w-3" />}
-            </span>
-            <span>
-              <span className="font-medium">Coach talks shit</span>
-              <span className="mt-0.5 block text-xs text-[var(--color-muted)]">
-                On-screen + voice roasts mid-workout. Turn this on — you should
-                hear a sample line right away; more play when you tap Done in a
-                session.
-              </span>
-            </span>
-          </button>
-
-          {profile.coachTrashTalk && (
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full"
-              onClick={() => {
-                unlockCoachAudio();
-                playCoachSample();
-                toast.message("Playing sample", {
-                  description: TRASH_TALK_LINES[0],
-                });
-              }}
-            >
-              Play sample line again
-            </Button>
-          )}
         </CardContent>
       </Card>
 
@@ -296,7 +251,7 @@ function ProfilePage() {
             </Select>
           </div>
           <div className="col-span-2 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-muted)]">
-            Est. BMR ~{Math.round(derived.bmr)} kcal · {derived.kg.toFixed(1)} kg ·{" "}
+            Est. BMR ~{Math.round(derived.bmr)} cal · {derived.kg.toFixed(1)} kg ·{" "}
             {Math.round(derived.cm)} cm
           </div>
           <Button

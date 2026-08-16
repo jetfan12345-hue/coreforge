@@ -27,9 +27,11 @@ const COLORS = [
 export function ConfettiBurst({
   active,
   durationMs = 2800,
+  count = 120,
 }: {
   active: boolean;
   durationMs?: number;
+  count?: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -54,7 +56,6 @@ export function ConfettiBurst({
     resize();
     window.addEventListener("resize", resize);
 
-    const count = 120;
     const particles: Particle[] = Array.from({ length: count }, () => {
       const angle = Math.random() * Math.PI * 2;
       const speed = 4 + Math.random() * 10;
@@ -102,7 +103,7 @@ export function ConfettiBurst({
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", resize);
     };
-  }, [active, durationMs]);
+  }, [active, durationMs, count]);
 
   if (!active) return null;
 

@@ -32,7 +32,7 @@ export interface UserProfile {
   onboarded: boolean;
   /** Demo coach in exercise media */
   demoModel: "female" | "male";
-  /** Female coach trash-talks mid-workout (text + speech) */
+  /** Female coach trash-talks mid-workout (on-screen lines only — never TTS / MP3). */
   coachTrashTalk: boolean;
 }
 
@@ -90,6 +90,27 @@ export interface ActiveWorkout {
   programId?: string;
   /** Circuit / follow-along session */
   circuitMode: boolean;
+  /** Set when the player actually mounts — leftover startSession drafts are not resumable. */
+  begun?: boolean;
+}
+
+/** True when an in-progress circuit can be continued (not an empty leftover). */
+export function isResumableSession(active: ActiveWorkout | null): boolean {
+  if (!active?.exercises?.length) return false;
+  const idx = active.currentExerciseIndex;
+  if (typeof idx !== "number" || idx < 0 || idx >= active.exercises.length) {
+    return false;
+  }
+  const hasRemaining = active.exercises.some(
+    (ex) => !ex.skipped && ex.sets?.some((s) => !s.done),
+  );
+  if (!hasRemaining) return false;
+  // Opened-and-exited leftovers (begun, index 0, nothing done) are not resumable.
+  // Require real progress: a completed set, a skip, or having left the first move.
+  return (
+    idx > 0 ||
+    active.exercises.some((ex) => ex.skipped || ex.sets?.some((s) => s.done))
+  );
 }
 
 interface FitnessState {
@@ -129,6 +150,9 @@ interface FitnessState {
     isRoundRest: boolean;
   } | null;
   setCurrentExercise: (index: number) => void;
+  markSessionBegun: () => void;
+  /** Jump back to a move and clear done/skipped so it can be redone. */
+  reopenMove: (index: number) => void;
   addSet: (exerciseIndex: number) => void;
   skipExercise: (exerciseIndex?: number) => void;
   swapExercise: (exerciseIndex: number, newExerciseId: string) => void;
@@ -335,6 +359,7 @@ export const useFitnessStore = create<FitnessState>()(
             currentExerciseIndex: 0,
             programId: opts?.programId,
             circuitMode,
+            begun: false,
           },
         });
       },
@@ -349,6 +374,7 @@ export const useFitnessStore = create<FitnessState>()(
             currentExerciseIndex: 0,
             programId: opts?.programId,
             circuitMode: true,
+            begun: false,
           },
         });
       },
@@ -427,6 +453,35 @@ export const useFitnessStore = create<FitnessState>()(
             ? { active: { ...s.active, currentExerciseIndex: index } }
             : s,
         ),
+
+      markSessionBegun: () =>
+        set((s) =>
+          s.active && !s.active.begun
+            ? { active: { ...s.active, begun: true } }
+            : s,
+        ),
+
+      reopenMove: (index) =>
+        set((s) => {
+          if (!s.active) return s;
+          const i = Math.max(0, Math.min(index, s.active.exercises.length - 1));
+          const exercises = s.active.exercises.map((ex, j) =>
+            j === i
+              ? {
+                  ...ex,
+                  skipped: false,
+                  sets: ex.sets.map((st) => ({ ...st, done: false })),
+                }
+              : ex,
+          );
+          return {
+            active: {
+              ...s.active,
+              exercises,
+              currentExerciseIndex: i,
+            },
+          };
+        }),
 
       addSet: (exerciseIndex) =>
         set((s) => {
@@ -598,7 +653,7 @@ export const useFitnessStore = create<FitnessState>()(
           demoModel:
             rawProfile.demoModel === "female" || rawProfile.demoModel === "male"
               ? rawProfile.demoModel
-              : (current.profile.demoModel ?? "male"),
+              : (current.profile.demoModel ?? "female"),
           coachTrashTalk:
             typeof rawProfile.coachTrashTalk === "boolean"
               ? rawProfile.coachTrashTalk
@@ -616,12 +671,37 @@ export const useFitnessStore = create<FitnessState>()(
             })),
           };
         }
+        if (active) {
+          const kept = (active.exercises ?? []).filter((ex) =>
+            getExercise(ex.exerciseId),
+          );
+          active = kept.length
+            ? {
+                ...active,
+                exercises: kept,
+                currentExerciseIndex: Math.min(
+                  active.currentExerciseIndex,
+                  kept.length - 1,
+                ),
+              }
+            : null;
+        }
+        if (active && !isResumableSession(active)) {
+          active = null;
+        }
+        const customIds = (p.customIds ?? current.customIds).filter((id) =>
+          getExercise(id),
+        );
+        const favorites = (p.favorites ?? current.favorites).filter((id) =>
+          getExercise(id),
+        );
         return {
           ...current,
           ...p,
           profile,
           active,
-          customIds: p.customIds ?? current.customIds,
+          customIds,
+          favorites,
         };
       },
     },

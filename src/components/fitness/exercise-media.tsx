@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pause, Play, RotateCcw, Volume2, ListChecks } from "lucide-react";
 import type { Exercise } from "@/data/exercises";
 import { resolveExerciseMedia } from "@/data/exercises";
@@ -11,21 +11,39 @@ export function ExerciseMedia({
   exercise,
   className,
   autoPlay = true,
+  compact = false,
+  overlay,
+  playing: playingProp,
+  showPlaybackToggle = true,
+  fill = false,
 }: {
   exercise: Exercise;
   className?: string;
   autoPlay?: boolean;
+  compact?: boolean;
+  overlay?: ReactNode;
+  /** When set, the parent owns play/pause (one Pause in the workout player). */
+  playing?: boolean;
+  showPlaybackToggle?: boolean;
+  /** Fill a flex parent instead of a tall 4:5 box (follow-along player). */
+  fill?: boolean;
 }) {
   const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "female");
   const media = useMemo(
     () => resolveExerciseMedia(exercise, demoModel),
     [exercise, demoModel],
   );
-  const [playing, setPlaying] = useState(autoPlay);
+  const [internalPlaying, setInternalPlaying] = useState(autoPlay);
+  const playing = playingProp ?? internalPlaying;
+  const setPlaying = (next: boolean | ((prev: boolean) => boolean)) => {
+    const value = typeof next === "function" ? next(playing) : next;
+    if (playingProp === undefined) setInternalPlaying(value);
+  };
   const [cueIndex, setCueIndex] = useState(0);
   const [imgSrc, setImgSrc] = useState(media.image);
   const [videoSrc, setVideoSrc] = useState(media.video);
   const [useVideo, setUseVideo] = useState(Boolean(media.video));
+  const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const cues = exercise.cues;
@@ -37,8 +55,9 @@ export function ExerciseMedia({
     setImgSrc(media.image);
     setVideoSrc(media.video);
     setUseVideo(Boolean(media.video));
-    setPlaying(autoPlay);
-  }, [exercise.id, media.image, media.video, autoPlay]);
+    setVideoReady(false);
+    if (playingProp === undefined) setInternalPlaying(autoPlay);
+  }, [exercise.id, media.image, media.video, autoPlay, playingProp]);
 
   useEffect(() => {
     const el = videoRef.current;
@@ -59,43 +78,27 @@ export function ExerciseMedia({
   }, [playing, cues.length]);
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", fill && "h-full min-h-0 space-y-0")}
+    >
       <div
         className={cn(
-          "relative overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface-2)]",
+          "overflow-hidden rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-black",
+          fill && "h-full",
           className,
         )}
       >
-        <div className="relative aspect-[4/5] h-full max-h-[inherit] w-full sm:aspect-video">
-          {useVideo && videoSrc ? (
-            <video
-              key={videoSrc}
-              ref={videoRef}
-              className="absolute inset-0 h-full w-full object-cover object-center"
-              src={videoSrc}
-              poster={imgSrc}
-              autoPlay={playing}
-              muted
-              loop
-              playsInline
-              onError={() => {
-                // Male missing → try female video, then still image
-                if (videoSrc !== media.femaleVideo && media.femaleVideo) {
-                  setVideoSrc(media.femaleVideo);
-                  setImgSrc(media.femaleImage);
-                } else {
-                  setUseVideo(false);
-                }
-              }}
-            />
-          ) : imgSrc ? (
+        <div
+          data-testid="demo-card"
+          className={cn(
+            "relative w-full bg-black",
+            fill ? "h-full min-h-0" : "aspect-[4/5]",
+          )}
+        >
+          {imgSrc ? (
             <img
               src={imgSrc}
               alt={`${exercise.name} demonstration`}
-              className={cn(
-                "absolute inset-0 h-full w-full object-cover object-center transition-transform duration-[4s] ease-out",
-                playing && "scale-105",
-              )}
+              className="absolute inset-0 h-full w-full object-contain object-center"
               onError={() => {
                 if (imgSrc !== media.femaleImage) {
                   setImgSrc(media.femaleImage);
@@ -113,54 +116,97 @@ export function ExerciseMedia({
             </div>
           )}
 
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/15" />
+          {useVideo && videoSrc ? (
+            <video
+              key={videoSrc}
+              ref={videoRef}
+              className={cn(
+                "absolute inset-0 h-full w-full object-contain object-center transition-opacity duration-200",
+                videoReady ? "opacity-100" : "opacity-0",
+              )}
+              src={videoSrc}
+              poster={imgSrc}
+              autoPlay={playing}
+              muted
+              loop
+              playsInline
+              preload="auto"
+              onLoadedData={() => setVideoReady(true)}
+              onCanPlay={() => setVideoReady(true)}
+              onError={() => {
+                setVideoReady(false);
+                if (videoSrc !== media.femaleVideo && media.femaleVideo) {
+                  setVideoSrc(media.femaleVideo);
+                  setImgSrc(media.femaleImage);
+                } else {
+                  setUseVideo(false);
+                }
+              }}
+            />
+          ) : null}
 
-          <div className="pointer-events-none absolute left-3 top-3 flex flex-wrap gap-2">
-            <span className="rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-white/90 backdrop-blur-sm">
-              {useVideo ? "Full-ROM loop" : "Demo"}
+          {overlay}
+
+          <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-wrap gap-2">
+            <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/90 backdrop-blur-sm">
+              {useVideo && videoReady ? "Full-ROM loop" : "Demo"}
             </span>
             {exercise.weighted && (
-              <span className="rounded-full bg-[var(--color-accent)]/90 px-2.5 py-1 text-[11px] font-semibold text-[var(--color-accent-fg)]">
+              <span className="rounded-full bg-[var(--color-accent)]/90 px-2 py-0.5 text-[10px] font-semibold text-[var(--color-accent-fg)]">
                 Weighted
               </span>
             )}
           </div>
 
-          <div className="absolute inset-x-0 bottom-0 p-4">
-            <div className="pointer-events-none mb-3 min-h-[1.5rem]">
+          {fill && cues[cueIndex] ? (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 to-transparent px-3 pb-2.5 pt-8">
               <p
                 key={cueIndex}
-                className="cue-enter font-display text-lg font-semibold tracking-tight text-white drop-shadow"
+                className="cue-enter text-center text-sm font-semibold leading-snug text-white"
               >
                 {cues[cueIndex]}
               </p>
-              <div className="mt-2 flex gap-1">
+            </div>
+          ) : null}
+        </div>
+
+        {fill ? null : (
+          <div className="border-t border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2.5">
+            <div className="mb-2 min-h-[1.25rem]">
+              <p
+                key={cueIndex}
+                className="cue-enter font-display text-base font-semibold tracking-tight"
+              >
+                {cues[cueIndex]}
+              </p>
+              <div className="mt-1.5 flex gap-1">
                 {cues.map((_, i) => (
                   <span
                     key={i}
                     className={cn(
                       "h-1 flex-1 rounded-full transition-colors",
-                      i === cueIndex ? "bg-[var(--color-primary)]" : "bg-white/25",
+                      i === cueIndex
+                        ? "bg-[var(--color-primary)]"
+                        : "bg-[var(--color-surface-3)]",
                     )}
                   />
                 ))}
               </div>
             </div>
-
             <div className="flex items-center gap-2">
+              {showPlaybackToggle && (
+                <Button
+                  size="icon-sm"
+                  variant="secondary"
+                  onClick={() => setPlaying((p) => !p)}
+                  aria-label={playing ? "Pause demo" : "Play demo"}
+                >
+                  {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </Button>
+              )}
               <Button
                 size="icon-sm"
                 variant="secondary"
-                className="border-0 bg-white/15 text-white hover:bg-white/25"
-                onClick={() => setPlaying((p) => !p)}
-                aria-label={playing ? "Pause demo" : "Play demo"}
-              >
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-              <Button
-                size="icon-sm"
-                variant="secondary"
-                className="border-0 bg-white/15 text-white hover:bg-white/25"
                 onClick={() => {
                   setCueIndex(0);
                   const el = videoRef.current;
@@ -173,16 +219,16 @@ export function ExerciseMedia({
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
-              <span className="pointer-events-none ml-auto flex items-center gap-1.5 text-xs text-white/70">
+              <span className="pointer-events-none ml-auto flex items-center gap-1.5 text-xs text-[var(--color-subtle)]">
                 <Volume2 className="h-3.5 w-3.5" />
                 Form guide
               </span>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {tips.length > 0 && (
+      {!compact && tips.length > 0 && (
         <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
           <div className="mb-2.5 flex items-center gap-2">
             <ListChecks className="h-4 w-4 text-[var(--color-primary)]" />

@@ -2,22 +2,22 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowRight,
   Check,
-  Clock,
-  Dumbbell,
-  Flame,
   Play,
   Sparkles,
-  Target,
-  Zap,
 } from "lucide-react";
-import { exercises, getExercise, heroImage, type Equipment } from "@/data/exercises";
+import {
+  exercises,
+  getExercise,
+  heroImage,
+  resolveExerciseMedia,
+  type Equipment,
+} from "@/data/exercises";
 
 import {
   beginnerMonthWeeks,
   buildSessionSlots,
   circuitRounds,
   estimateSessionDurationMin,
-  GEAR_OPTIONS,
   intermediateMonthWeeks,
   programs,
   currentProgramWeek,
@@ -27,11 +27,10 @@ import {
   type ProgramId,
 } from "@/data/programs";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StatsRow } from "@/components/fitness/stats-row";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useFitnessStore, dateKey } from "@/store/fitness";
-import { useMemo, useState } from "react";
+import { useFitnessStore, dateKey, isResumableSession } from "@/store/fitness";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -48,8 +47,6 @@ type CustomGearFilter =
   | "ab wheel"
   | "band"
   | "dumbbell";
-
-const REST_PRESETS = [5, 10, 15, 20] as const;
 
 const GEAR_FILTERS: { value: CustomGearFilter; label: string }[] = [
   { value: "bodyweight", label: "No gear" },
@@ -69,12 +66,20 @@ function HomePage() {
   const history = useFitnessStore((s) => s.history);
   const customIds = useFitnessStore((s) => s.customIds);
   const toggleCustom = useFitnessStore((s) => s.toggleCustom);
-  const toggleGear = useFitnessStore((s) => s.toggleGear);
-  const setProfile = useFitnessStore((s) => s.setProfile);
   const startSession = useFitnessStore((s) => s.startSession);
-  const setRestSeconds = useFitnessStore((s) => s.setRestSeconds);
+  const cancelWorkout = useFitnessStore((s) => s.cancelWorkout);
   const bodyKg = useFitnessStore((s) => s.bodyWeightKg());
   const active = useFitnessStore((s) => s.active);
+  const canResume = isResumableSession(active);
+  const hasCompletedSession = history.length > 0;
+
+  useEffect(() => {
+    // Drop opened-and-exited leftovers. Do not touch a fresh startSession draft
+    // (begun !== true) — Get to it / Start circuit set that right before navigate.
+    if (active?.begun && !isResumableSession(active)) {
+      cancelWorkout();
+    }
+  }, [active, cancelWorkout]);
   const streak = useFitnessStore((s) => s.streakDays());
   const today = dateKey(new Date());
 
@@ -122,7 +127,6 @@ function HomePage() {
   const weekNum = currentProgramWeek(profile.programStartedAt);
   const weekGoal = 4;
   const weekProgress = Math.min(100, Math.round((stats.daysHit / weekGoal) * 100));
-  const ownedGear = GEAR_OPTIONS.filter((g) => gear?.[g.key]);
 
   const activeProgram = programs.find((p) => p.id === tab);
 
@@ -185,16 +189,6 @@ function HomePage() {
     );
   }, [customGear]);
 
-  const bodyCount = exercises.filter(
-    (e) =>
-      e.equipment.every((eq) => eq === "bodyweight") &&
-      !e.weighted &&
-      (!e.role || e.role === "work"),
-  ).length;
-  const gearCount = exercises.filter(
-    (e) => e.weighted || e.equipment.some((eq) => eq !== "bodyweight"),
-  ).length;
-
   const launch = () => {
     if (!slots.length) return;
     startSession(slots, {
@@ -203,153 +197,43 @@ function HomePage() {
     void navigate({ to: "/workout" });
   };
 
-  const displayIds = workIds;
+  const startBeginner = () => {
+    const beginnerSlots = buildSessionSlots("beginner", {
+      week: weekNum,
+      gear,
+      includeGearOverload: profile.includeGearOverload,
+    });
+    if (!beginnerSlots.length) return;
+    startSession(beginnerSlots, { programId: "beginner" });
+    void navigate({ to: "/workout" });
+  };
+
+  const startPrimary = () => {
+    if (!hasCompletedSession) {
+      startBeginner();
+      return;
+    }
+    launch();
+  };
+
+  const levelLabel =
+    tab === "beginner"
+      ? "Month 1 · Beginner"
+      : tab === "intermediate"
+        ? "Month 2"
+        : tab === "advanced"
+          ? "Advanced"
+          : "Custom";
+
+  const showScoreboard =
+    stats.sessions > 0 ||
+    stats.todayCals > 0 ||
+    stats.weekCals > 0 ||
+    streak > 0;
 
   return (
     <div className="space-y-6">
-      <section>
-        <p className="text-sm text-[var(--color-muted)]">
-          {profile.name ? `Hey ${profile.name}` : "Hey there"}
-          <span className="text-[var(--color-subtle)]">
-            {streak > 0 ? ` · ${streak}-day streak` : " · pick a level & train"}
-          </span>
-        </p>
-        <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
-          Train your core
-        </h1>
-        <p className="mt-2 max-w-md text-sm text-[var(--color-muted)]">
-          Warm-up → {summary.workPerRound || 6}–8 move circuit × rounds → cooldown
-          stretches. Skip or swap any move.
-        </p>
-      </section>
-
-      <StatsRow
-        items={[
-          { label: "Today", value: `${stats.todayCals} cal`, icon: "flame" },
-          { label: "This week", value: `${stats.weekCals}`, icon: "trend" },
-          { label: "Streak", value: `${streak}d`, icon: "calendar" },
-          { label: "Sessions", value: String(stats.sessions), icon: "dumbbell" },
-        ]}
-      />
-
-      <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Dumbbell className="h-4 w-4 text-[var(--color-primary)]" />
-            <p className="text-sm font-medium">Your gear</p>
-          </div>
-          <p className="text-xs text-[var(--color-muted)]">
-            {ownedGear.length === 0
-              ? "Floor only · advanced still works"
-              : `${ownedGear.length} owned`}
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          {GEAR_OPTIONS.map(({ key, label, hint }) => {
-            const on = Boolean(gear?.[key]);
-            return (
-              <button
-                key={key}
-                type="button"
-                onClick={() => toggleGear(key)}
-                className={cn(
-                  "rounded-[var(--radius-md)] border px-2.5 py-2 text-left transition",
-                  on
-                    ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15"
-                    : "border-[var(--color-border)] hover:border-[var(--color-border-strong)]",
-                )}
-              >
-                <p
-                  className={cn(
-                    "text-[11px] font-semibold",
-                    on
-                      ? "text-[var(--color-primary)]"
-                      : "text-[var(--color-fg)]",
-                  )}
-                >
-                  {on ? "✓ " : ""}
-                  {label}
-                </p>
-                <p className="text-[10px] text-[var(--color-subtle)]">{hint}</p>
-              </button>
-            );
-          })}
-        </div>
-        {ownedGear.length > 0 && (
-          <button
-            type="button"
-            onClick={() =>
-              setProfile({ includeGearOverload: !profile.includeGearOverload })
-            }
-            className={cn(
-              "mt-3 flex w-full items-center gap-2 rounded-[var(--radius-md)] border px-3 py-2 text-left text-xs transition",
-              profile.includeGearOverload
-                ? "border-[var(--color-primary)]/30 bg-[var(--color-primary)]/8 text-[var(--color-primary)]"
-                : "border-[var(--color-border)] text-[var(--color-muted)]",
-            )}
-          >
-            <span
-              className={cn(
-                "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border",
-                profile.includeGearOverload
-                  ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                  : "border-[var(--color-border-strong)]",
-              )}
-            >
-              {profile.includeGearOverload && <Check className="h-2.5 w-2.5" />}
-            </span>
-            Layer owned gear as Advanced overload (bodyweight circuit first)
-          </button>
-        )}
-      </div>
-
-      <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-[var(--color-primary)]" />
-            <p className="text-sm font-medium">This week</p>
-          </div>
-          <p className="text-xs tabular text-[var(--color-muted)]">
-            {stats.daysHit}/{weekGoal} days
-          </p>
-        </div>
-        <div className="mb-3 grid grid-cols-7 gap-1.5">
-          {weekStrip.map((d) => (
-            <div key={d.key} className="flex flex-col items-center gap-1">
-              <span className="text-[10px] uppercase text-[var(--color-subtle)]">
-                {d.label}
-              </span>
-              <span
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold tabular",
-                  d.hit
-                    ? "bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
-                    : d.isToday
-                      ? "border border-[var(--color-primary)]/50 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
-                      : "bg-[var(--color-surface-2)] text-[var(--color-subtle)]",
-                )}
-              >
-                {d.hit ? "✓" : d.isToday ? "·" : ""}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
-          <div
-            className="h-full rounded-full bg-[var(--color-primary)] transition-all"
-            style={{ width: `${weekProgress}%` }}
-          />
-        </div>
-        <p className="mt-2 text-[11px] text-[var(--color-subtle)]">
-          Program week {weekNum} of 4
-          {weekMeta ? ` · ${weekMeta.label}` : ""}
-          {stats.daysHit >= weekGoal
-            ? " · goal hit"
-            : ` · ${weekGoal - stats.daysHit} more day${weekGoal - stats.daysHit === 1 ? "" : "s"} to goal`}
-        </p>
-      </div>
-
-      {active && (
+      {canResume && (
         <Button asChild className="w-full" size="lg">
           <Link to="/workout">
             Resume workout
@@ -358,16 +242,8 @@ function HomePage() {
         </Button>
       )}
 
-      <section className="space-y-4">
-        <div>
-          <h2 className="font-display text-lg font-semibold tracking-tight">
-            Today’s session
-          </h2>
-          <p className="text-xs text-[var(--color-muted)]">
-            Follow-along circuit · mix of timed & rep moves · auto warm-up & stretch
-          </p>
-        </div>
-
+      <section className="space-y-3">
+        {hasCompletedSession && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as ProgramId)}>
           <TabsList className="grid h-auto w-full grid-cols-4 gap-1 p-1">
             {(
@@ -381,140 +257,72 @@ function HomePage() {
               <TabsTrigger
                 key={value}
                 value={value}
-                className="px-1 py-2.5 text-[11px] sm:text-xs data-[state=active]:shadow-none"
+                className="whitespace-normal px-1 py-2.5 text-[11px] leading-tight sm:text-xs data-[state=active]:shadow-none"
               >
-                {label}
+                {value === "beginner" ? (
+                  <span className="flex flex-col">
+                    <span>Month 1</span>
+                    <span className="text-[10px] font-medium opacity-75">
+                      Beginner
+                    </span>
+                  </span>
+                ) : (
+                  label
+                )}
               </TabsTrigger>
             ))}
           </TabsList>
         </Tabs>
+        )}
 
         <div className="overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--color-border)] bg-[var(--color-surface)]">
-          <div className="relative h-44 w-full sm:h-52">
+          <div className="flex items-center gap-3 border-b border-[var(--color-border)] p-3">
             <img
-              src={heroImage(profile.demoModel ?? "male")}
+              src={heroImage(profile.demoModel ?? "female")}
               alt=""
-              className="absolute inset-0 h-full w-full object-cover object-[center_20%]"
+              className="h-14 w-14 shrink-0 rounded-[var(--radius-md)] object-cover object-[center_18%]"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-surface)] via-[var(--color-surface)]/45 to-transparent" />
-            <div className="absolute bottom-3 left-4 right-4">
-              <div className="mb-1 flex flex-wrap gap-1.5">
-                <Badge className="border-0 bg-black/45 capitalize text-white">
-                  {tab === "beginner"
-                    ? "Month 1"
-                    : tab === "intermediate"
-                      ? "Month 2"
-                      : tab}
-                </Badge>
-                {weekMeta && (
-                  <Badge className="border-0 bg-black/45 text-white">
-                    Wk {weekNum} · {weekMeta.label}
-                  </Badge>
-                )}
-                <Badge className="border-0 bg-black/45 text-white">
-                  {rounds} rounds
-                </Badge>
-                <Badge className="border-0 bg-black/45 text-white">
-                  <Clock className="mr-1 h-3 w-3" />~{estMin} min
-                </Badge>
-                <Badge className="border-0 bg-black/45 text-white">
-                  <Flame className="mr-1 h-3 w-3" />~{estCals} cal
-                </Badge>
-              </div>
-              <h3 className="font-display text-xl font-semibold tracking-tight">
+            <div className="min-w-0 flex-1">
+              <h1 className="font-display text-lg font-semibold tracking-tight">
+                {!hasCompletedSession
+                  ? "Month 1 · Beginner"
+                  : tab === "custom"
+                    ? "Your custom circuit"
+                    : activeProgram?.name}
+              </h1>
+              <p className="text-xs text-[var(--color-muted)]">
                 {tab === "custom"
-                  ? "Your custom circuit"
-                  : activeProgram?.name}
-              </h3>
-              <p className="mt-0.5 text-xs text-white/80">
-                {tab === "custom"
-                  ? `${bodyCount} floor · ${gearCount} with gear — mix freely`
-                  : activeProgram?.tagline}
+                  ? "Build your own — optional"
+                  : !hasCompletedSession
+                    ? `Warm-up, a short floor circuit, then stretch. About ${estMin} min.`
+                    : `${weekMeta ? `Wk ${weekNum} · ${weekMeta.label}` : levelLabel} · ${rounds} rounds · ~${estMin} min · ~${estCals} cal`}
               </p>
             </div>
           </div>
 
-          <div className="space-y-4 p-4 sm:p-5">
-            {tab !== "custom" && activeProgram && (
-              <p className="text-sm text-[var(--color-muted)]">
-                {activeProgram.description}
+          <div className="space-y-3 p-4 sm:p-5">
+            <Button
+              className="h-14 w-full text-base font-semibold"
+              size="lg"
+              variant={canResume ? "secondary" : "default"}
+              disabled={!slots.length}
+              onClick={startPrimary}
+            >
+              <Play className="h-5 w-5" />
+              {canResume ? "Start new circuit" : "Start circuit"}
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+            {!slots.length && tab === "custom" && (
+              <p className="text-center text-xs text-[var(--color-muted)]">
+                Pick at least one move for your circuit.
               </p>
             )}
 
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-[var(--color-subtle)]">
-                  Warm-up
-                </p>
-                <p className="font-display text-sm font-semibold">2 moves</p>
-              </div>
-              <div className="rounded-[var(--radius-md)] border border-[var(--color-primary)]/30 bg-[var(--color-primary)]/10 px-2 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-[var(--color-primary)]">
-                  Circuit
-                </p>
-                <p className="font-display text-sm font-semibold text-[var(--color-primary)]">
-                  {summary.workPerRound} × {rounds}
-                </p>
-              </div>
-              <div className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-[var(--color-subtle)]">
-                  Cooldown
-                </p>
-                <p className="font-display text-sm font-semibold">4 stretches</p>
-              </div>
-            </div>
-
-            {tab === "advanced" && (
-              <p className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 text-xs text-[var(--color-muted)]">
-                Pure bodyweight forge
-                {profile.includeGearOverload && ownedGear.length
-                  ? ` + optional ${ownedGear.map((g) => g.label.toLowerCase()).join(", ")} overload`
-                  : " — no gym required"}
-                .
-              </p>
+            {hasCompletedSession && (
+            <p className="pointer-events-none text-center text-xs text-[var(--color-subtle)]">
+              Warm-up 2 · Circuit {summary.workPerRound || 6}×{rounds} · Cooldown 2
+            </p>
             )}
-
-            <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-[var(--color-subtle)]">
-                  <Zap className="h-3.5 w-3.5 text-[var(--color-primary)]" />
-                  Rest between moves
-                </span>
-                <span className="font-display text-sm font-semibold tabular text-[var(--color-primary)]">
-                  {rest}s
-                </span>
-              </div>
-              <div className="mb-2 flex flex-wrap gap-1.5">
-                {REST_PRESETS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setRestSeconds(s)}
-                    className={cn(
-                      "min-w-[3rem] rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular transition",
-                      rest === s
-                        ? "border-[var(--color-primary)]/40 bg-[var(--color-primary)]/15 text-[var(--color-primary)]"
-                        : "border-[var(--color-border)] text-[var(--color-muted)] hover:border-[var(--color-border-strong)]",
-                    )}
-                  >
-                    {s}s
-                  </button>
-                ))}
-              </div>
-              <input
-                type="range"
-                min={5}
-                max={20}
-                step={1}
-                value={rest}
-                onChange={(e) => setRestSeconds(Number(e.target.value))}
-                className="w-full accent-[var(--color-primary)]"
-                aria-label="Rest seconds"
-              />
-              <p className="mt-1.5 text-[11px] text-[var(--color-subtle)]">
-                30s rest between full circuit rounds · stretches always finish the session
-              </p>
-            </div>
 
             {tab === "custom" && (
               <div className="space-y-3">
@@ -581,71 +389,99 @@ function HomePage() {
               </div>
             )}
 
-            {tab !== "custom" && (
-              <ol className="space-y-2">
-                <li className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
-                  Work circuit (×{rounds})
-                </li>
-                {displayIds.map((id, i) => {
-                  const ex = getExercise(id);
-                  if (!ex) return null;
-                  return (
-                    <li
-                      key={`${id}-${i}`}
-                      className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-2"
-                    >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface)] text-[11px] font-semibold tabular text-[var(--color-muted)]">
-                        {i + 1}
-                      </span>
-                      <img
-                        src={ex.image}
-                        alt=""
-                        className="h-11 w-11 rounded-md object-cover"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{ex.name}</p>
-                        <p className="text-[11px] text-[var(--color-subtle)]">
-                          {ex.unit === "reps"
-                            ? `${ex.defaultReps} reps`
-                            : `${ex.defaultSeconds}s ${ex.unit}`}{" "}
-                          · {ex.focus.slice(0, 2).join(", ")}
-                        </p>
-                      </div>
-                    </li>
-                  );
-                })}
-                <li className="pt-1 text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
-                  Always included
-                </li>
-                <li className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted)]">
-                  <span className="font-medium text-[var(--color-fg)]">Warm-up:</span>{" "}
-                  Jumping jacks · Mountain climbers
-                  <br />
-                  <span className="font-medium text-[var(--color-fg)]">Cooldown:</span>{" "}
-                  Cobra · Prone T · Hip shift L/R
-                </li>
-              </ol>
+            {tab !== "custom" && hasCompletedSession && (
+              <CircuitInventory
+                workIds={workIds}
+                rounds={rounds}
+                demoModel={profile.demoModel ?? "female"}
+              />
             )}
 
-            <Button
-              className="w-full"
-              size="lg"
-              disabled={!slots.length}
-              onClick={launch}
-            >
-              <Play className="h-4 w-4" />
-              Start circuit
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            {!slots.length && tab === "custom" && (
-              <p className="text-center text-xs text-[var(--color-muted)]">
-                Pick at least one move for your circuit.
-              </p>
+            {tab !== "custom" && !hasCompletedSession && (
+              <details className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2">
+                <summary className="cursor-pointer text-sm font-medium">
+                  What’s in this circuit
+                </summary>
+                <div className="mt-3">
+                  <CircuitInventory
+                    workIds={workIds}
+                    rounds={rounds}
+                    demoModel={profile.demoModel ?? "female"}
+                  />
+                </div>
+              </details>
+            )}
+
+            {hasCompletedSession && (
+            <p className="text-center text-[11px] text-[var(--color-subtle)]">
+              Rest, gear, and coach settings live in{" "}
+              <Link to="/profile" className="underline underline-offset-2">
+                You
+              </Link>
+              .
+            </p>
             )}
           </div>
         </div>
       </section>
 
+      {showScoreboard && (
+        <StatsRow
+          items={[
+            { label: "Today", value: `${stats.todayCals} cal`, icon: "flame" },
+            { label: "This week", value: `${stats.weekCals}`, icon: "trend" },
+            { label: "Streak", value: `${streak}d`, icon: "calendar" },
+            { label: "Sessions", value: String(stats.sessions), icon: "dumbbell" },
+          ]}
+        />
+      )}
+
+      {hasCompletedSession && (
+      <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">This week</p>
+          <p className="text-xs tabular text-[var(--color-muted)]">
+            {stats.daysHit}/{weekGoal} days
+          </p>
+        </div>
+        <div className="mb-3 grid grid-cols-7 gap-1.5">
+          {weekStrip.map((d) => (
+            <div key={d.key} className="flex flex-col items-center gap-1">
+              <span className="text-[10px] uppercase text-[var(--color-subtle)]">
+                {d.label}
+              </span>
+              <span
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-semibold tabular",
+                  d.hit
+                    ? "bg-[var(--color-primary)] text-[var(--color-primary-fg)]"
+                    : d.isToday
+                      ? "border border-[var(--color-primary)]/50 bg-[var(--color-primary)]/10 text-[var(--color-primary)]"
+                      : "bg-[var(--color-surface-2)] text-[var(--color-subtle)]",
+                )}
+              >
+                {d.hit ? "✓" : d.isToday ? "·" : ""}
+              </span>
+            </div>
+          ))}
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-[var(--color-surface-2)]">
+          <div
+            className="h-full rounded-full bg-[var(--color-primary)] transition-all"
+            style={{ width: `${weekProgress}%` }}
+          />
+        </div>
+        <p className="mt-2 text-[11px] text-[var(--color-subtle)]">
+          Program week {weekNum} of 4
+          {weekMeta ? ` · ${weekMeta.label}` : ""}
+          {stats.daysHit >= weekGoal
+            ? " · goal hit"
+            : ` · ${weekGoal - stats.daysHit} more day${weekGoal - stats.daysHit === 1 ? "" : "s"} to goal`}
+        </p>
+      </div>
+      )}
+
+      {hasCompletedSession && (
       <section className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="mb-2 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-[var(--color-primary)]" />
@@ -653,11 +489,72 @@ function HomePage() {
         </div>
         <ul className="space-y-1.5 text-xs text-[var(--color-muted)]">
           <li>· Warm-up (jacks + climbers) raises heart rate before floor work</li>
-          <li>· 6–8 core moves in a row, then the whole circuit repeats</li>
-          <li>· Timed holds and rep moves mixed — follow the demo video</li>
+          <li>· Six core moves in a row, then the whole circuit repeats</li>
+          <li>· Timer and Skip sit under the demo — next move is labeled</li>
           <li>· Cooldown stretches open the abs and hips when you’re done</li>
         </ul>
       </section>
+      )}
     </div>
+  );
+}
+
+function CircuitInventory({
+  workIds,
+  rounds,
+  demoModel,
+}: {
+  workIds: string[];
+  rounds: number;
+  demoModel: "female" | "male";
+}) {
+  return (
+    <ol className="space-y-2">
+      <li className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
+        Work circuit (×{rounds})
+      </li>
+      {workIds.map((id, i) => {
+        const ex = getExercise(id);
+        if (!ex) return null;
+        const thumb = resolveExerciseMedia(ex, demoModel).image;
+        return (
+          <li
+            key={`${id}-${i}`}
+            className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-2"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface)] text-[11px] font-semibold tabular text-[var(--color-muted)]">
+              {i + 1}
+            </span>
+            <img
+              src={thumb}
+              alt=""
+              className="h-11 w-11 rounded-md object-cover"
+              onError={(e) => {
+                e.currentTarget.src = ex.image;
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{ex.name}</p>
+              <p className="text-[11px] text-[var(--color-subtle)]">
+                {ex.unit === "reps"
+                  ? `${ex.defaultReps} reps`
+                  : `${ex.defaultSeconds}s ${ex.unit}`}{" "}
+                · {ex.focus.slice(0, 2).join(", ")}
+              </p>
+            </div>
+          </li>
+        );
+      })}
+      <li className="pt-1 text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
+        Always included
+      </li>
+      <li className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted)]">
+        <span className="font-medium text-[var(--color-fg)]">Warm-up:</span>{" "}
+        Jumping jacks · Mountain climbers
+        <br />
+        <span className="font-medium text-[var(--color-fg)]">Cooldown:</span>{" "}
+        Cobra stretch · Prone T
+      </li>
+    </ol>
   );
 }
