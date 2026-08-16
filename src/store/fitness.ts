@@ -98,15 +98,19 @@ export interface ActiveWorkout {
 export function isResumableSession(active: ActiveWorkout | null): boolean {
   if (!active?.exercises?.length) return false;
   const idx = active.currentExerciseIndex;
-  if (idx < 0 || idx >= active.exercises.length) return false;
+  if (typeof idx !== "number" || idx < 0 || idx >= active.exercises.length) {
+    return false;
+  }
   const hasRemaining = active.exercises.some(
-    (ex) => !ex.skipped && ex.sets.some((s) => !s.done),
+    (ex) => !ex.skipped && ex.sets?.some((s) => !s.done),
   );
   if (!hasRemaining) return false;
-  const hasProgress =
+  // Opened-and-exited leftovers (begun, index 0, nothing done) are not resumable.
+  // Require real progress: a completed set, a skip, or having left the first move.
+  return (
     idx > 0 ||
-    active.exercises.some((ex) => ex.skipped || ex.sets.some((s) => s.done));
-  return Boolean(active.begun) || hasProgress;
+    active.exercises.some((ex) => ex.skipped || ex.sets?.some((s) => s.done))
+  );
 }
 
 interface FitnessState {
@@ -668,7 +672,9 @@ export const useFitnessStore = create<FitnessState>()(
           };
         }
         if (active) {
-          const kept = active.exercises.filter((ex) => getExercise(ex.exerciseId));
+          const kept = (active.exercises ?? []).filter((ex) =>
+            getExercise(ex.exerciseId),
+          );
           active = kept.length
             ? {
                 ...active,
@@ -679,6 +685,9 @@ export const useFitnessStore = create<FitnessState>()(
                 ),
               }
             : null;
+        }
+        if (active && !isResumableSession(active)) {
+          active = null;
         }
         const customIds = (p.customIds ?? current.customIds).filter((id) =>
           getExercise(id),

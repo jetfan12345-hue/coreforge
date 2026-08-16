@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { StatsRow } from "@/components/fitness/stats-row";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFitnessStore, dateKey, isResumableSession } from "@/store/fitness";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -67,9 +67,19 @@ function HomePage() {
   const customIds = useFitnessStore((s) => s.customIds);
   const toggleCustom = useFitnessStore((s) => s.toggleCustom);
   const startSession = useFitnessStore((s) => s.startSession);
+  const cancelWorkout = useFitnessStore((s) => s.cancelWorkout);
   const bodyKg = useFitnessStore((s) => s.bodyWeightKg());
   const active = useFitnessStore((s) => s.active);
   const canResume = isResumableSession(active);
+  const hasCompletedSession = history.length > 0;
+
+  useEffect(() => {
+    // Drop opened-and-exited leftovers. Do not touch a fresh startSession draft
+    // (begun !== true) — Get to it / Start circuit set that right before navigate.
+    if (active?.begun && !isResumableSession(active)) {
+      cancelWorkout();
+    }
+  }, [active, cancelWorkout]);
   const streak = useFitnessStore((s) => s.streakDays());
   const today = dateKey(new Date());
 
@@ -187,9 +197,28 @@ function HomePage() {
     void navigate({ to: "/workout" });
   };
 
+  const startBeginner = () => {
+    const beginnerSlots = buildSessionSlots("beginner", {
+      week: weekNum,
+      gear,
+      includeGearOverload: profile.includeGearOverload,
+    });
+    if (!beginnerSlots.length) return;
+    startSession(beginnerSlots, { programId: "beginner" });
+    void navigate({ to: "/workout" });
+  };
+
+  const startPrimary = () => {
+    if (!hasCompletedSession) {
+      startBeginner();
+      return;
+    }
+    launch();
+  };
+
   const levelLabel =
     tab === "beginner"
-      ? "Month 1"
+      ? "Month 1 · Beginner"
       : tab === "intermediate"
         ? "Month 2"
         : tab === "advanced"
@@ -214,6 +243,7 @@ function HomePage() {
       )}
 
       <section className="space-y-3">
+        {hasCompletedSession && (
         <Tabs value={tab} onValueChange={(v) => setTab(v as ProgramId)}>
           <TabsList className="grid h-auto w-full grid-cols-4 gap-1 p-1">
             {(
@@ -227,13 +257,23 @@ function HomePage() {
               <TabsTrigger
                 key={value}
                 value={value}
-                className="px-1 py-2.5 text-[11px] sm:text-xs data-[state=active]:shadow-none"
+                className="whitespace-normal px-1 py-2.5 text-[11px] leading-tight sm:text-xs data-[state=active]:shadow-none"
               >
-                {label}
+                {value === "beginner" ? (
+                  <span className="flex flex-col">
+                    <span>Month 1</span>
+                    <span className="text-[10px] font-medium opacity-75">
+                      Beginner
+                    </span>
+                  </span>
+                ) : (
+                  label
+                )}
               </TabsTrigger>
             ))}
           </TabsList>
         </Tabs>
+        )}
 
         <div className="overflow-hidden rounded-[var(--radius-2xl)] border border-[var(--color-border)] bg-[var(--color-surface)]">
           <div className="flex items-center gap-3 border-b border-[var(--color-border)] p-3">
@@ -244,14 +284,18 @@ function HomePage() {
             />
             <div className="min-w-0 flex-1">
               <h1 className="font-display text-lg font-semibold tracking-tight">
-                {tab === "custom"
-                  ? "Your custom circuit"
-                  : activeProgram?.name}
+                {!hasCompletedSession
+                  ? "Month 1 · Beginner"
+                  : tab === "custom"
+                    ? "Your custom circuit"
+                    : activeProgram?.name}
               </h1>
               <p className="text-xs text-[var(--color-muted)]">
                 {tab === "custom"
                   ? "Build your own — optional"
-                  : `${weekMeta ? `Wk ${weekNum} · ${weekMeta.label}` : levelLabel} · ${rounds} rounds · ~${estMin} min · ~${estCals} cal`}
+                  : !hasCompletedSession
+                    ? `Warm-up, a short floor circuit, then stretch. About ${estMin} min.`
+                    : `${weekMeta ? `Wk ${weekNum} · ${weekMeta.label}` : levelLabel} · ${rounds} rounds · ~${estMin} min · ~${estCals} cal`}
               </p>
             </div>
           </div>
@@ -262,7 +306,7 @@ function HomePage() {
               size="lg"
               variant={canResume ? "secondary" : "default"}
               disabled={!slots.length}
-              onClick={launch}
+              onClick={startPrimary}
             >
               <Play className="h-5 w-5" />
               {canResume ? "Start new circuit" : "Start circuit"}
@@ -274,9 +318,11 @@ function HomePage() {
               </p>
             )}
 
+            {hasCompletedSession && (
             <p className="pointer-events-none text-center text-xs text-[var(--color-subtle)]">
               Warm-up 2 · Circuit {summary.workPerRound || 6}×{rounds} · Cooldown 2
             </p>
+            )}
 
             {tab === "custom" && (
               <div className="space-y-3">
@@ -343,59 +389,30 @@ function HomePage() {
               </div>
             )}
 
-            {tab !== "custom" && (
-              <ol className="space-y-2">
-                <li className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
-                  Work circuit (×{rounds})
-                </li>
-                {workIds.map((id, i) => {
-                  const ex = getExercise(id);
-                  if (!ex) return null;
-                  const thumb = resolveExerciseMedia(
-                    ex,
-                    profile.demoModel ?? "female",
-                  ).image;
-                  return (
-                    <li
-                      key={`${id}-${i}`}
-                      className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-2"
-                    >
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface)] text-[11px] font-semibold tabular text-[var(--color-muted)]">
-                        {i + 1}
-                      </span>
-                      <img
-                        src={thumb}
-                        alt=""
-                        className="h-11 w-11 rounded-md object-cover"
-                        onError={(e) => {
-                          e.currentTarget.src = ex.image;
-                        }}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{ex.name}</p>
-                        <p className="text-[11px] text-[var(--color-subtle)]">
-                          {ex.unit === "reps"
-                            ? `${ex.defaultReps} reps`
-                            : `${ex.defaultSeconds}s ${ex.unit}`}{" "}
-                          · {ex.focus.slice(0, 2).join(", ")}
-                        </p>
-                      </div>
-                    </li>
-                  );
-                })}
-                <li className="pt-1 text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
-                  Always included
-                </li>
-                <li className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted)]">
-                  <span className="font-medium text-[var(--color-fg)]">Warm-up:</span>{" "}
-                  Jumping jacks · Mountain climbers
-                  <br />
-                  <span className="font-medium text-[var(--color-fg)]">Cooldown:</span>{" "}
-                  Cobra stretch · Prone T
-                </li>
-              </ol>
+            {tab !== "custom" && hasCompletedSession && (
+              <CircuitInventory
+                workIds={workIds}
+                rounds={rounds}
+                demoModel={profile.demoModel ?? "female"}
+              />
             )}
 
+            {tab !== "custom" && !hasCompletedSession && (
+              <details className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2">
+                <summary className="cursor-pointer text-sm font-medium">
+                  What’s in this circuit
+                </summary>
+                <div className="mt-3">
+                  <CircuitInventory
+                    workIds={workIds}
+                    rounds={rounds}
+                    demoModel={profile.demoModel ?? "female"}
+                  />
+                </div>
+              </details>
+            )}
+
+            {hasCompletedSession && (
             <p className="text-center text-[11px] text-[var(--color-subtle)]">
               Rest, gear, and coach settings live in{" "}
               <Link to="/profile" className="underline underline-offset-2">
@@ -403,6 +420,7 @@ function HomePage() {
               </Link>
               .
             </p>
+            )}
           </div>
         </div>
       </section>
@@ -418,6 +436,7 @@ function HomePage() {
         />
       )}
 
+      {hasCompletedSession && (
       <div className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <p className="text-sm font-medium">This week</p>
@@ -460,7 +479,9 @@ function HomePage() {
             : ` · ${weekGoal - stats.daysHit} more day${weekGoal - stats.daysHit === 1 ? "" : "s"} to goal`}
         </p>
       </div>
+      )}
 
+      {hasCompletedSession && (
       <section className="rounded-[var(--radius-xl)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="mb-2 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-[var(--color-primary)]" />
@@ -473,6 +494,67 @@ function HomePage() {
           <li>· Cooldown stretches open the abs and hips when you’re done</li>
         </ul>
       </section>
+      )}
     </div>
+  );
+}
+
+function CircuitInventory({
+  workIds,
+  rounds,
+  demoModel,
+}: {
+  workIds: string[];
+  rounds: number;
+  demoModel: "female" | "male";
+}) {
+  return (
+    <ol className="space-y-2">
+      <li className="text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
+        Work circuit (×{rounds})
+      </li>
+      {workIds.map((id, i) => {
+        const ex = getExercise(id);
+        if (!ex) return null;
+        const thumb = resolveExerciseMedia(ex, demoModel).image;
+        return (
+          <li
+            key={`${id}-${i}`}
+            className="flex items-center gap-3 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface-2)] px-2.5 py-2"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface)] text-[11px] font-semibold tabular text-[var(--color-muted)]">
+              {i + 1}
+            </span>
+            <img
+              src={thumb}
+              alt=""
+              className="h-11 w-11 rounded-md object-cover"
+              onError={(e) => {
+                e.currentTarget.src = ex.image;
+              }}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium">{ex.name}</p>
+              <p className="text-[11px] text-[var(--color-subtle)]">
+                {ex.unit === "reps"
+                  ? `${ex.defaultReps} reps`
+                  : `${ex.defaultSeconds}s ${ex.unit}`}{" "}
+                · {ex.focus.slice(0, 2).join(", ")}
+              </p>
+            </div>
+          </li>
+        );
+      })}
+      <li className="pt-1 text-[11px] font-medium uppercase tracking-wide text-[var(--color-subtle)]">
+        Always included
+      </li>
+      <li className="rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-muted)]">
+        <span className="font-medium text-[var(--color-fg)]">Warm-up:</span>{" "}
+        Jumping jacks · Mountain climbers
+        <br />
+        <span className="font-medium text-[var(--color-fg)]">Cooldown:</span>{" "}
+        Cobra stretch · Prone T
+      </li>
+    </ol>
   );
 }
