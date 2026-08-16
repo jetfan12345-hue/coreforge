@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button";
 import { StatsRow } from "@/components/fitness/stats-row";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useFitnessStore, dateKey, isResumableSession } from "@/store/fitness";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -67,10 +67,19 @@ function HomePage() {
   const customIds = useFitnessStore((s) => s.customIds);
   const toggleCustom = useFitnessStore((s) => s.toggleCustom);
   const startSession = useFitnessStore((s) => s.startSession);
+  const cancelWorkout = useFitnessStore((s) => s.cancelWorkout);
   const bodyKg = useFitnessStore((s) => s.bodyWeightKg());
   const active = useFitnessStore((s) => s.active);
   const canResume = isResumableSession(active);
   const hasCompletedSession = history.length > 0;
+
+  useEffect(() => {
+    // Drop opened-and-exited leftovers. Do not touch a fresh startSession draft
+    // (begun !== true) — Get to it / Start circuit set that right before navigate.
+    if (active?.begun && !isResumableSession(active)) {
+      cancelWorkout();
+    }
+  }, [active, cancelWorkout]);
   const streak = useFitnessStore((s) => s.streakDays());
   const today = dateKey(new Date());
 

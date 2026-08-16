@@ -84,6 +84,56 @@ if (/don't be a pussy/i.test(afterGetToIt) || /Coach talks shit/i.test(afterGetT
   process.exit(1);
 }
 
+await page.getByRole("button", { name: /^exit$/i }).click();
+await page.getByRole("button", { name: /save for later/i }).click();
+await page.waitForURL("**/", { timeout: 15000 });
+await page.waitForTimeout(700);
+await page.screenshot({ path: "/workspace/screenshots/home-after-exit-no-progress.png" });
+const afterExit = await page.locator("body").innerText();
+if (/Resume workout/i.test(afterExit) || /Start new circuit/i.test(afterExit)) {
+  console.error("exited leftover still showed Resume", afterExit.slice(0, 500));
+  process.exit(1);
+}
+if (!/Start circuit/i.test(afterExit) || /How sessions work/i.test(afterExit)) {
+  console.error("exit-without-progress home is not first-run", afterExit.slice(0, 500));
+  process.exit(1);
+}
+
+function leftoverActive() {
+  return {
+    date: new Date().toISOString().slice(0, 10),
+    startedAt: new Date().toISOString(),
+    exercises: [
+      {
+        exerciseId: "jumping-jacks",
+        sets: [{ reps: 0, seconds: 40, done: false }],
+        phase: "warmup",
+      },
+    ],
+    currentExerciseIndex: 0,
+    programId: "beginner",
+    circuitMode: true,
+    begun: true,
+  };
+}
+
+await page.evaluate((active) => {
+  const raw = JSON.parse(localStorage.getItem("coreforge-fitness-v3") || "{}");
+  raw.state = raw.state || {};
+  raw.state.history = [];
+  raw.state.active = active;
+  if (raw.state.profile) raw.state.profile.onboarded = true;
+  localStorage.setItem("coreforge-fitness-v3", JSON.stringify(raw));
+}, leftoverActive());
+await page.reload({ waitUntil: "networkidle" });
+await page.waitForTimeout(800);
+await page.screenshot({ path: "/workspace/screenshots/home-leftover-active.png" });
+const leftoverText = await page.locator("body").innerText();
+if (/Resume workout/i.test(leftoverText) || /Start new circuit/i.test(leftoverText)) {
+  console.error("leftover active still showed Resume", leftoverText.slice(0, 500));
+  process.exit(1);
+}
+
 await seedFirstRunHome();
 await page.goto("http://127.0.0.1:8080/", { waitUntil: "networkidle" });
 await page.waitForTimeout(800);
@@ -105,6 +155,8 @@ const homeBad = [
   /How sessions work/i,
   /This week/i,
   /Program week/i,
+  /ALWAYS INCLUDED/i,
+  /0\/4/i,
   /Resume workout/i,
   /Month 2/i,
 ].filter((re) => re.test(homeText));

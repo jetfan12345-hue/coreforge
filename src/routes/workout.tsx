@@ -31,7 +31,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useFitnessStore } from "@/store/fitness";
+import { isResumableSession, useFitnessStore } from "@/store/fitness";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -700,6 +700,10 @@ function WorkoutPage() {
                 setPaused(true);
                 setTimerRunning(false);
                 setExitOpen(false);
+                const current = useFitnessStore.getState().active;
+                if (!isResumableSession(current)) {
+                  cancelWorkout();
+                }
                 void navigate({ to: "/" });
               }}
             >
