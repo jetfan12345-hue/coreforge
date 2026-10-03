@@ -2,7 +2,12 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Dumbbell, Heart, Timer, Flame } from "lucide-react";
 import type { Exercise } from "@/data/exercises";
-import { estimateExerciseCalories, resolveExerciseMedia } from "@/data/exercises";
+import {
+  PLACEHOLDER_FOOTAGE_LABEL,
+  estimateExerciseCalories,
+  isPlaceholderMedia,
+  resolveExerciseMedia,
+} from "@/data/exercises";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useFitnessStore } from "@/store/fitness";
@@ -110,6 +115,14 @@ export function ExerciseCard({
           <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">
             {exercise.description}
           </p>
+          {isPlaceholderMedia(imgSrc) && (
+            <p
+              data-testid="placeholder-flag"
+              className="mt-1 text-[10px] italic text-[var(--color-subtle)]"
+            >
+              {PLACEHOLDER_FOOTAGE_LABEL}
+            </p>
+          )}
           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-subtle)]">
             <span className="inline-flex items-center gap-1">
               <Flame className="h-3 w-3 text-[var(--color-primary)]" />~{est} cal

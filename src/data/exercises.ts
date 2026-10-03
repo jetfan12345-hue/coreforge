@@ -63,12 +63,27 @@ function media(id: string) {
   };
 }
 
+/** Exercises that have male demo files in public/exercises/male/. Others use the female clip directly (no 404 round-trip). */
+const MALE_MEDIA_IDS: ReadonlySet<string> = new Set([
+  "bird-dog",
+  "cobra-stretch",
+  "crunch",
+  "dead-bug",
+  "heel-touch",
+  "jumping-jacks",
+  "leg-raise",
+  "mountain-climber",
+  "penguin-crunch",
+  "plank",
+  "prone-t",
+]);
+
 /** Resolve media paths for the selected demo model (male falls back to female on 404 in UI). */
 export function resolveExerciseMedia(
   exercise: Pick<Exercise, "id" | "image" | "video">,
   model: DemoModel = "female",
 ): { image: string; video?: string; femaleImage: string; femaleVideo?: string } {
-  if (model === "male") {
+  if (model === "male" && MALE_MEDIA_IDS.has(exercise.id)) {
     return {
       image: `${publicUrl(`/exercises/male/${exercise.id}.jpg`)}?v=${V}`,
       video: `${publicUrl(`/exercises/male/${exercise.id}.mp4`)}?v=${V}`,
@@ -82,6 +97,62 @@ export function resolveExerciseMedia(
     femaleImage: exercise.image,
     femaleVideo: exercise.video,
   };
+}
+
+/**
+ * Demo clips that are stock footage of random real people (Pexels, swapped in
+ * 2026-08-15) instead of the locked Core Forge models. Flagged in the UI until
+ * the locked-model clips replace them. Verified 2026-10-03 by file fingerprint:
+ * these six female files are the only 720x1280 Pexels encodes in public/exercises.
+ */
+export const PLACEHOLDER_FOOTAGE_IDS: ReadonlySet<string> = new Set([
+  "plank",
+  "bicycle-crunch",
+  "v-up",
+  "mountain-climber",
+  "jumping-jacks",
+  "crunch",
+]);
+
+export const PLACEHOLDER_FOOTAGE_LABEL = "Placeholder footage, being replaced";
+
+/** True when a resolved media URL points at one of the placeholder (stock) files. Male files never match. */
+export function isPlaceholderMedia(src?: string | null): boolean {
+  if (!src) return false;
+  const m = src.match(/(?:^|\/)exercises\/([^/?#]+)\.(?:mp4|jpg)(?:[?#]|$)/);
+  return Boolean(m && PLACEHOLDER_FOOTAGE_IDS.has(m[1]!));
+}
+
+/**
+ * Clips that were built (2026-08-13) by splicing a horizontally mirrored copy
+ * of a segment into the loop to fake "other side" reps. On screen that makes
+ * the model (and the whole gym) jump to the opposite side of the frame for
+ * ~0.8s every loop, which is the "keeps switching sides" bug. The player
+ * draws these frames un-mirrored so the model stays on one side.
+ * Windows are [start, end) in seconds at 24 fps (frame n starts at n/24).
+ */
+const F = (n: number) => n / 24;
+const MIRRORED_SEGMENTS: Record<string, ReadonlyArray<readonly [number, number]>> = {
+  "exercises/dead-bug.mp4": [[F(58), F(77)]],
+  "exercises/bird-dog.mp4": [[F(58), F(77)]],
+  "exercises/male/bird-dog.mp4": [[F(58), F(77)]],
+  "exercises/male/penguin-crunch.mp4": [
+    [F(19), F(38)],
+    [F(58), F(77)],
+    [F(96), F(115)],
+    [F(134), F(147)],
+  ],
+};
+
+export function mirroredSegmentsFor(
+  src?: string | null,
+): ReadonlyArray<readonly [number, number]> | undefined {
+  if (!src) return undefined;
+  const path = src.split(/[?#]/)[0] ?? "";
+  for (const key of Object.keys(MIRRORED_SEGMENTS)) {
+    if (path === key || path.endsWith(`/${key}`)) return MIRRORED_SEGMENTS[key];
+  }
+  return undefined;
 }
 
 export function heroImage(model: DemoModel = "female"): string {
