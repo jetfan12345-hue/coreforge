@@ -52,24 +52,41 @@ export interface Exercise {
   role?: ExerciseRole;
 }
 
-const V = 20;
+import { publicUrl } from "@/lib/public-url";
+
+const V = 31;
 
 function media(id: string) {
   return {
-    image: `/exercises/${id}.jpg?v=${V}`,
-    video: `/exercises/${id}.mp4?v=${V}`,
+    image: `${publicUrl(`/exercises/${id}.jpg`)}?v=${V}`,
+    video: `${publicUrl(`/exercises/${id}.mp4`)}?v=${V}`,
   };
 }
+
+/** Exercises that have male demo files in public/exercises/male/. Others use the female clip directly (no 404 round-trip). */
+const MALE_MEDIA_IDS: ReadonlySet<string> = new Set([
+  "bird-dog",
+  "cobra-stretch",
+  "crunch",
+  "dead-bug",
+  "heel-touch",
+  "jumping-jacks",
+  "leg-raise",
+  "mountain-climber",
+  "penguin-crunch",
+  "plank",
+  "prone-t",
+]);
 
 /** Resolve media paths for the selected demo model (male falls back to female on 404 in UI). */
 export function resolveExerciseMedia(
   exercise: Pick<Exercise, "id" | "image" | "video">,
   model: DemoModel = "female",
 ): { image: string; video?: string; femaleImage: string; femaleVideo?: string } {
-  if (model === "male") {
+  if (model === "male" && MALE_MEDIA_IDS.has(exercise.id)) {
     return {
-      image: `/exercises/male/${exercise.id}.jpg?v=${V}`,
-      video: `/exercises/male/${exercise.id}.mp4?v=${V}`,
+      image: `${publicUrl(`/exercises/male/${exercise.id}.jpg`)}?v=${V}`,
+      video: `${publicUrl(`/exercises/male/${exercise.id}.mp4`)}?v=${V}`,
       femaleImage: exercise.image,
       femaleVideo: exercise.video,
     };
@@ -82,10 +99,66 @@ export function resolveExerciseMedia(
   };
 }
 
+/**
+ * Demo clips that are stock footage of random real people (Pexels, swapped in
+ * 2026-08-15) instead of the locked Core Forge models. Flagged in the UI until
+ * the locked-model clips replace them. Verified 2026-10-03 by file fingerprint:
+ * these six female files are the only 720x1280 Pexels encodes in public/exercises.
+ */
+export const PLACEHOLDER_FOOTAGE_IDS: ReadonlySet<string> = new Set([
+  "plank",
+  "bicycle-crunch",
+  "v-up",
+  "mountain-climber",
+  "jumping-jacks",
+  "crunch",
+]);
+
+export const PLACEHOLDER_FOOTAGE_LABEL = "Placeholder footage, being replaced";
+
+/** True when a resolved media URL points at one of the placeholder (stock) files. Male files never match. */
+export function isPlaceholderMedia(src?: string | null): boolean {
+  if (!src) return false;
+  const m = src.match(/(?:^|\/)exercises\/([^/?#]+)\.(?:mp4|jpg)(?:[?#]|$)/);
+  return Boolean(m && PLACEHOLDER_FOOTAGE_IDS.has(m[1]!));
+}
+
+/**
+ * Clips that were built (2026-08-13) by splicing a horizontally mirrored copy
+ * of a segment into the loop to fake "other side" reps. On screen that makes
+ * the model (and the whole gym) jump to the opposite side of the frame for
+ * ~0.8s every loop, which is the "keeps switching sides" bug. The player
+ * draws these frames un-mirrored so the model stays on one side.
+ * Windows are [start, end) in seconds at 24 fps (frame n starts at n/24).
+ */
+const F = (n: number) => n / 24;
+const MIRRORED_SEGMENTS: Record<string, ReadonlyArray<readonly [number, number]>> = {
+  "exercises/dead-bug.mp4": [[F(58), F(77)]],
+  "exercises/bird-dog.mp4": [[F(58), F(77)]],
+  "exercises/male/bird-dog.mp4": [[F(58), F(77)]],
+  "exercises/male/penguin-crunch.mp4": [
+    [F(19), F(38)],
+    [F(58), F(77)],
+    [F(96), F(115)],
+    [F(134), F(147)],
+  ],
+};
+
+export function mirroredSegmentsFor(
+  src?: string | null,
+): ReadonlyArray<readonly [number, number]> | undefined {
+  if (!src) return undefined;
+  const path = src.split(/[?#]/)[0] ?? "";
+  for (const key of Object.keys(MIRRORED_SEGMENTS)) {
+    if (path === key || path.endsWith(`/${key}`)) return MIRRORED_SEGMENTS[key];
+  }
+  return undefined;
+}
+
 export function heroImage(model: DemoModel = "female"): string {
   return model === "male"
-    ? `/exercises/male/hero.jpg?v=${V}`
-    : `/exercises/hero.jpg?v=${V}`;
+    ? `${publicUrl("/exercises/male/hero.jpg")}?v=${V}`
+    : `${publicUrl("/exercises/hero.jpg")}?v=${V}`;
 }
 
 /**
@@ -856,7 +929,7 @@ export const exercises: Exercise[] = [
 		id: "penguin-crunch",
 		name: "Penguin Crunch",
 		shortName: "Penguin",
-		description: "Also called heel touches or ankle taps — lying side-to-side oblique pulses. Reach each heel without sitting up.",
+		description: "Lying side-to-side oblique pulses. Knees bent, feet flat — reach each heel without sitting up.",
 		howTo: [
 			"Lie flat on your back, knees bent, feet flat on the floor — shoulders mostly stay on the ground.",
 			"Brace lightly, then slide your left hand down toward your left heel while the left shoulder shifts slightly left along the floor.",
@@ -881,80 +954,10 @@ export const exercises: Exercise[] = [
 		popularRank: 20,
 		...media("penguin-crunch"),
 		cues: [
-			"Shoulders up",
-			"Touch right heel",
-			"Touch left heel",
-			"Stay braced"
-		]
-	},
-	{
-		id: "heel-touch",
-		name: "Heel Touch",
-		shortName: "Heel Touch",
-		description: "Same family as the penguin crunch — side-to-side heel reaches lying down. Prefer Penguin Crunch in circuits.",
-		howTo: [
-			"Lie flat on your back, knees bent, feet flat, shoulders mostly on the ground.",
-			"Slide right hand to right heel, then left hand to left heel — shoulders shift slightly along the floor with each reach.",
-			"Keep the upper back low; this is a side-reach, not a sit-up.",
-			"Pulse with control, not momentum."
-		],
-		tips: [
-			"Shoulders mostly stay on the mat while you twist to each heel.",
-			"Reach for heels by shortening the side abs.",
-			"Don’t sit up — this is a lying side-reach."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "beginner",
-		focus: ["obliques", "upper abs"],
-		met: 3.2,
-		unit: "reps",
-		defaultSets: 1,
-		defaultReps: 24,
-		defaultSeconds: 0,
-		restSeconds: 10,
-		weighted: false,
-		popularRank: 21,
-		...media("heel-touch"),
-		cues: [
-			"Lie down",
-			"Touch right heel",
-			"Touch left heel",
-			"Stay braced"
-		]
-	},
-	{
-		id: "toe-touch",
-		name: "Toe Touch Crunch",
-		shortName: "Toe Touch",
-		description: "Legs vertical, reach hands to toes — pure upper-ab short-range crunch.",
-		howTo: [
-			"Lie on back with legs straight up toward the ceiling (or slightly bent).",
-			"Reach both hands up and actually touch your toes, curling shoulders off the floor.",
-			"Lower shoulders with control; keep legs tall.",
-			"Exhale on each reach — fingertips should meet the toes every rep."
-		],
-		tips: [
-			"Legs stay vertical; only the torso crunches.",
-			"Actually touch the toes each rep.",
-			"Soft knees if hamstrings are tight."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "beginner",
-		focus: ["upper abs"],
-		met: 3.3,
-		unit: "reps",
-		defaultSets: 1,
-		defaultReps: 15,
-		defaultSeconds: 0,
-		restSeconds: 10,
-		weighted: false,
-		popularRank: 22,
-		...media("toe-touch"),
-		cues: [
-			"Legs up",
-			"Touch toes",
-			"Squeeze",
-			"Lower soft"
+			"Feet flat",
+			"Reach right heel",
+			"Reach left heel",
+			"Stay low"
 		]
 	},
 	{
@@ -1032,41 +1035,6 @@ export const exercises: Exercise[] = [
 		]
 	},
 	{
-		id: "scissors",
-		name: "Scissor Kicks",
-		shortName: "Scissors",
-		description: "Alternating long-leg crosses hovering off the floor — lower abs + hip flexors.",
-		howTo: [
-			"Lie on back, hands under glutes, shoulders optional lift.",
-			"Raise both legs a few inches.",
-			"Cross one leg over the other in a scissor pattern, alternating.",
-			"Keep low back pressed into the floor."
-		],
-		tips: [
-			"Long legs, small controlled crosses.",
-			"If low back arches, raise legs higher.",
-			"Shoulders can stay down if neck fatigues."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "intermediate",
-		focus: ["lower abs", "hip flexors"],
-		met: 4,
-		unit: "time",
-		defaultSets: 1,
-		defaultReps: 1,
-		defaultSeconds: 35,
-		restSeconds: 12,
-		weighted: false,
-		popularRank: 25,
-		...media("scissors"),
-		cues: [
-			"Hover legs",
-			"Cross over",
-			"Switch",
-			"Low back down"
-		]
-	},
-	{
 		id: "sit-up",
 		name: "Sit-Up",
 		shortName: "Sit-Up",
@@ -1099,41 +1067,6 @@ export const exercises: Exercise[] = [
 			"Curl up",
 			"Sit tall",
 			"Lower slow"
-		]
-	},
-	{
-		id: "long-arm-crunch",
-		name: "Long-Arm Crunch",
-		shortName: "Long Arm",
-		description: "Crunch with arms extended overhead — longer lever, harder upper abs. Small range only — not a sit-up.",
-		howTo: [
-			"Lie flat with knees bent, arms straight overhead by ears on the floor.",
-			"Crunch only the shoulders a few inches up while keeping arms long by the ears.",
-			"Pause at the top, then lower back to the floor with control.",
-			"Do not sit all the way up — this is a short crunch, not a sit-up."
-		],
-		tips: [
-			"Arms stay glued by the ears the whole rep.",
-			"Small range is correct — quality over height.",
-			"Exhale on the crunch."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "beginner",
-		focus: ["upper abs"],
-		met: 3.4,
-		unit: "reps",
-		defaultSets: 1,
-		defaultReps: 14,
-		defaultSeconds: 0,
-		restSeconds: 10,
-		weighted: false,
-		popularRank: 27,
-		...media("long-arm-crunch"),
-		cues: [
-			"Arms long",
-			"Small crunch",
-			"Hold",
-			"Lower"
 		]
 	},
 	{
@@ -1356,45 +1289,6 @@ export const exercises: Exercise[] = [
 			"Dip hip",
 			"Drive up",
 			"Long line"
-		]
-	},
-	{
-		id: "swimmer",
-		name: "Swimmer",
-		shortName: "Swimmer",
-		description: "Prone alternating arm/leg lifts — balances all the crunch work with posterior chain and anti-extension control.",
-		howTo: [
-			"Lie face down, arms extended overhead, legs long.",
-			"Lift right arm and left leg a few inches, then switch: left arm + right leg.",
-			"Keep forehead toward the mat; don’t crank the neck.",
-			"Flutter in a smooth swimming rhythm — small range, continuous."
-		],
-		tips: [
-			"Long body, small lifts — not a huge arch.",
-			"Opposite limbs move together.",
-			"Exhale steady; squeeze glutes lightly."
-		],
-		equipment: ["bodyweight"],
-		difficulty: "beginner",
-		focus: [
-			"posterior",
-			"full core",
-			"transverse"
-		],
-		met: 3.5,
-		unit: "time",
-		defaultSets: 1,
-		defaultReps: 1,
-		defaultSeconds: 35,
-		restSeconds: 12,
-		weighted: false,
-		popularRank: 34,
-		...media("swimmer"),
-		cues: [
-			"Face down",
-			"Opposite lift",
-			"Switch",
-			"Long body"
 		]
 	},
 	{

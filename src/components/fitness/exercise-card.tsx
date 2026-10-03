@@ -2,7 +2,12 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Dumbbell, Heart, Timer, Flame } from "lucide-react";
 import type { Exercise } from "@/data/exercises";
-import { estimateExerciseCalories, resolveExerciseMedia } from "@/data/exercises";
+import {
+  PLACEHOLDER_FOOTAGE_LABEL,
+  estimateExerciseCalories,
+  isPlaceholderMedia,
+  resolveExerciseMedia,
+} from "@/data/exercises";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useFitnessStore } from "@/store/fitness";
@@ -11,16 +16,20 @@ export function ExerciseCard({
   exercise,
   bodyKg,
   compact,
+  listIndex,
 }: {
   exercise: Exercise;
   bodyKg: number;
   compact?: boolean;
+  /** 1-based index in the current filtered list (hides jumpy popularRank). */
+  listIndex?: number;
 }) {
   const favorites = useFitnessStore((s) => s.favorites);
   const toggleFavorite = useFitnessStore((s) => s.toggleFavorite);
-  const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "male");
+  const demoModel = useFitnessStore((s) => s.profile.demoModel ?? "female");
   const media = resolveExerciseMedia(exercise, demoModel);
   const [imgSrc, setImgSrc] = useState(media.image);
+  const [imgReady, setImgReady] = useState(false);
   const isFav = favorites.includes(exercise.id);
   const est = estimateExerciseCalories({
     met: exercise.met,
@@ -33,6 +42,7 @@ export function ExerciseCard({
 
   useEffect(() => {
     setImgSrc(media.image);
+    setImgReady(false);
   }, [media.image]);
 
   return (
@@ -49,30 +59,48 @@ export function ExerciseCard({
       >
         <div
           className={cn(
-            "relative overflow-hidden bg-[var(--color-surface-2)]",
+            "relative overflow-hidden bg-[var(--color-surface-3)]",
             compact
               ? "h-20 w-20 shrink-0 rounded-[var(--radius-md)]"
               : "aspect-[5/3] w-full",
           )}
+          style={{
+            backgroundImage: `url("${imgSrc}")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
         >
+          {!imgReady && (
+            <div
+              aria-hidden
+              className="absolute inset-0 animate-pulse bg-[var(--color-surface-2)]/55"
+            />
+          )}
           <img
             src={imgSrc}
-            alt=""
-            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
-            onError={(e) => {
+            alt={`${exercise.name} demo`}
+            loading="lazy"
+            decoding="async"
+            className={cn(
+              "relative h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]",
+              imgReady ? "opacity-100" : "opacity-0",
+            )}
+            onLoad={() => setImgReady(true)}
+            onError={() => {
               if (imgSrc !== media.femaleImage) {
                 setImgSrc(media.femaleImage);
-              } else {
-                (e.target as HTMLImageElement).style.display = "none";
+                setImgReady(false);
               }
             }}
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
           {!compact && (
             <div className="absolute bottom-2 left-2 flex gap-1.5">
-              <Badge variant="secondary" className="bg-black/50 text-white border-0">
-                #{exercise.popularRank}
-              </Badge>
+              {listIndex != null && (
+                <Badge variant="secondary" className="bg-black/50 text-white border-0">
+                  #{listIndex}
+                </Badge>
+              )}
               {exercise.weighted && <Badge variant="weighted">Weighted</Badge>}
             </div>
           )}
@@ -87,6 +115,14 @@ export function ExerciseCard({
           <p className="mt-1 line-clamp-2 text-xs text-[var(--color-muted)]">
             {exercise.description}
           </p>
+          {isPlaceholderMedia(imgSrc) && (
+            <p
+              data-testid="placeholder-flag"
+              className="mt-1 text-[10px] italic text-[var(--color-subtle)]"
+            >
+              {PLACEHOLDER_FOOTAGE_LABEL}
+            </p>
+          )}
           <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--color-subtle)]">
             <span className="inline-flex items-center gap-1">
               <Flame className="h-3 w-3 text-[var(--color-primary)]" />~{est} cal

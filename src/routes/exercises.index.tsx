@@ -81,10 +81,10 @@ function ExercisesPage() {
     return items;
   }, [q, gear, level, favorites]);
 
-  const bodyCount = exercises.filter(
+  const bodyCount = list.filter(
     (e) => e.equipment.every((eq) => eq === "bodyweight") && !e.weighted,
   ).length;
-  const gearCount = exercises.length - bodyCount;
+  const gearCount = list.length - bodyCount;
 
   return (
     <div className="space-y-5">
@@ -93,7 +93,13 @@ function ExercisesPage() {
           Exercise library
         </h1>
         <p className="mt-1 text-sm text-[var(--color-muted)]">
-          {bodyCount} bodyweight · {gearCount} with gear · form demos
+          {list.length === 0
+            ? "No moves match these filters"
+            : gearCount === 0
+              ? `${bodyCount} bodyweight · form demos`
+              : bodyCount === 0
+                ? `${gearCount} with gear · form demos`
+                : `${bodyCount} bodyweight · ${gearCount} with gear · form demos`}
         </p>
       </div>
 
@@ -154,8 +160,13 @@ function ExercisesPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        {list.map((ex) => (
-          <ExerciseCard key={ex.id} exercise={ex} bodyKg={bodyKg} />
+        {list.map((ex, i) => (
+          <ExerciseCard
+            key={ex.id}
+            exercise={ex}
+            bodyKg={bodyKg}
+            listIndex={i + 1}
+          />
         ))}
       </div>
 

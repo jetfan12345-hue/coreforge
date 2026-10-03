@@ -1,0 +1,125 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches:
+      - cursor/form-demos-male-coverage-2761
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  deployments: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:pages
+
+      # GitHub Apps / GITHUB_TOKEN cannot enable Pages (403). We still try so
+      # the first owner click on Settings → Pages is enough; until then the
+      # publish-branch job keeps gh-pages current for "Deploy from branch".
+      - name: Ensure GitHub Pages uses GitHub Actions
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          BRANCH="${{ github.event.repository.default_branch }}"
+          if ! gh api "repos/${REPO}/pages" --silent >/dev/null 2>&1; then
+            echo "Pages: creating site (workflow build)…"
+            set +e
+            jq -n --arg branch "$BRANCH" '{build_type:"workflow",source:{branch:$branch,path:"/"}}' \
+              | gh api -X POST "repos/${REPO}/pages" --input -
+            create_status=$?
+            set -e
+            if [ "$create_status" -ne 0 ]; then
+              echo "Workflow create failed; trying legacy gh-pages source payload…"
+              jq -n '{build_type:"legacy",source:{branch:"gh-pages",path:"/"}}' \
+                | gh api -X POST "repos/${REPO}/pages" --input - || true
+            fi
+          else
+            BT="$(gh api "repos/${REPO}/pages" --jq .build_type)"
+            echo "Pages: already enabled (build_type=${BT})"
+            if [ "$BT" != "workflow" ]; then
+              echo "Pages: switching build type to workflow…"
+              gh api -X PUT "repos/${REPO}/pages" -f build_type=workflow || true
+            fi
+          fi
+          gh api "repos/${REPO}/pages" || true
+
+      - uses: actions/configure-pages@v5
+        continue-on-error: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-pages
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pages-site
+          path: dist-pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Report Pages URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "page_url=${{ steps.deployment.outputs.page_url }}"
+          gh api "repos/${{ github.repository }}/pages" || true
+
+  # Fallback if Actions Pages is still off: publish the static SPA to gh-pages
+  # so Settings → Pages → Deploy from branch → gh-pages can serve /coreforge/.
+  publish-branch:
+    needs: [build]
+    if: always() && needs.build.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: pages-site
+          path: dist-pages
+      - name: Publish gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist-pages
+          force_orphan: true
+          enable_jekyll: false
+      - name: Enable Pages from gh-pages if still missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          sleep 3
+          if gh api "repos/${REPO}/pages" --silent >/dev/null 2>&1; then
+            echo "Pages already enabled."
+            gh api "repos/${REPO}/pages"
+            exit 0
+          fi
+          echo "Pages: creating from gh-pages branch…"
+          jq -n '{source:{branch:"gh-pages",path:"/"}}' \
+            | gh api -X POST "repos/${REPO}/pages" --input - || true
+          gh api "repos/${REPO}/pages" || true

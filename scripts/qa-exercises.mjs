@@ -49,7 +49,7 @@ await page.screenshot({ path: "/workspace/screenshots/home-onboarded-v5.png" });
 const homeText = await page.locator("body").innerText();
 console.log("home", homeText.slice(0, 250).replace(/\n/g, " | "));
 
-const ids = ["crunch", "hollow-hold", "dead-bug", "flutter-kick", "long-arm-crunch", "reverse-crunch", "bird-dog", "heel-touch", "sit-up", "plank-hip-dip", "plank-shoulder-tap", "toe-touch", "v-up"];
+const ids = ["crunch", "hollow-hold", "dead-bug", "flutter-kick", "penguin-crunch", "reverse-crunch", "bird-dog", "sit-up", "plank-hip-dip", "plank-shoulder-tap", "v-up"];
 for (const id of ids) {
   await page.goto(`http://127.0.0.1:8080/exercises/${id}`, { waitUntil: "networkidle", timeout: 45000 });
   await page.waitForTimeout(1500);
