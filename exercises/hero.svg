@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#141c10"/>
+      <stop offset="100%" stop-color="#283a2c"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="30%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#3dd6c6" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#3dd6c6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#g)"/>
+  <rect width="1200" height="675" fill="url(#glow)"/>
+  <g transform="translate(480.0,227.5) scale(1.6500000000000001)">
+    <circle cx="120" cy="28" r="16" fill="none" stroke="#f2f3f4" stroke-width="5"/>
+    <path d="M120 40 V100 M85 65 L155 65 M100 100 L80 160 M140 100 L160 160" fill="none" stroke="#f2f3f4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <rect x="0" y="495" width="1200" height="180" fill="url(#g)" opacity="0.2"/>
+  <text x="48" y="585" font-family="system-ui,sans-serif" font-size="48" font-weight="700" fill="#f2f3f4">CoreForge</text>
+  <text x="48" y="625" font-family="system-ui,sans-serif" font-size="20" fill="#9aa1a9">Ab training</text>
+  
+  <circle cx="1140" cy="615" r="8" fill="#3dd6c6"/>
+</svg>
