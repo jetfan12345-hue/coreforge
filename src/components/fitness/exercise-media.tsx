@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pause, Play, RotateCcw, Volume2, ListChecks } from "lucide-react";
 import type { Exercise } from "@/data/exercises";
-import { resolveExerciseMedia } from "@/data/exercises";
+import {
+  PLACEHOLDER_FOOTAGE_LABEL,
+  isPlaceholderMedia,
+  mirroredSegmentsFor,
+  resolveExerciseMedia,
+} from "@/data/exercises";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useFitnessStore } from "@/store/fitness";
@@ -45,6 +50,12 @@ export function ExerciseMedia({
   const [useVideo, setUseVideo] = useState(Boolean(media.video));
   const [videoReady, setVideoReady] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const mirrored = useMemo(
+    () => (useVideo ? mirroredSegmentsFor(videoSrc) : undefined),
+    [useVideo, videoSrc],
+  );
+  const placeholder = isPlaceholderMedia(useVideo && videoSrc ? videoSrc : imgSrc);
 
   const cues = exercise.cues;
   const tips = exercise.tips.slice(0, 3);
@@ -68,6 +79,67 @@ export function ExerciseMedia({
       el.pause();
     }
   }, [playing, useVideo, videoSrc]);
+
+  // Some source clips contain a horizontally mirrored splice (see
+  // mirroredSegmentsFor). Paint every frame to a canvas and un-mirror the
+  // spliced frames so the model never jumps to the other side of the frame.
+  useEffect(() => {
+    const v = videoRef.current;
+    const c = canvasRef.current;
+    if (!mirrored || !v || !c) return;
+    const half = 1 / 48;
+    let stopped = false;
+    let vfc = 0;
+    let raf = 0;
+    const draw = (t: number) => {
+      if (stopped || !v.videoWidth || !v.videoHeight) return;
+      if (c.width !== v.videoWidth || c.height !== v.videoHeight) {
+        c.width = v.videoWidth;
+        c.height = v.videoHeight;
+      }
+      const ctx = c.getContext("2d");
+      if (!ctx) return;
+      const flip = mirrored.some(([a, b]) => t >= a - half && t < b - half);
+      ctx.setTransform(flip ? -1 : 1, 0, 0, 1, flip ? c.width : 0, 0);
+      ctx.drawImage(v, 0, 0, c.width, c.height);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+    };
+    type VfcVideo = HTMLVideoElement & {
+      requestVideoFrameCallback?: (
+        cb: (now: number, meta: { mediaTime: number }) => void,
+      ) => number;
+      cancelVideoFrameCallback?: (id: number) => void;
+    };
+    const vv = v as VfcVideo;
+    if (typeof vv.requestVideoFrameCallback === "function") {
+      const onFrame = (_now: number, meta: { mediaTime: number }) => {
+        if (stopped) return;
+        draw(meta.mediaTime);
+        vfc = vv.requestVideoFrameCallback!(onFrame);
+      };
+      vfc = vv.requestVideoFrameCallback(onFrame);
+    } else {
+      const loop = () => {
+        if (stopped) return;
+        draw(v.currentTime);
+        raf = window.requestAnimationFrame(loop);
+      };
+      raf = window.requestAnimationFrame(loop);
+    }
+    const redraw = () => draw(v.currentTime);
+    v.addEventListener("loadeddata", redraw);
+    v.addEventListener("seeked", redraw);
+    redraw();
+    return () => {
+      stopped = true;
+      if (vfc && typeof vv.cancelVideoFrameCallback === "function") {
+        vv.cancelVideoFrameCallback(vfc);
+      }
+      if (raf) window.cancelAnimationFrame(raf);
+      v.removeEventListener("loadeddata", redraw);
+      v.removeEventListener("seeked", redraw);
+    };
+  }, [mirrored, videoSrc]);
 
   useEffect(() => {
     if (!playing || cues.length === 0) return;
@@ -122,7 +194,7 @@ export function ExerciseMedia({
               ref={videoRef}
               className={cn(
                 "absolute inset-0 h-full w-full object-contain object-center transition-opacity duration-200",
-                videoReady ? "opacity-100" : "opacity-0",
+                videoReady && !mirrored ? "opacity-100" : "opacity-0",
               )}
               src={videoSrc}
               poster={imgSrc}
@@ -145,7 +217,29 @@ export function ExerciseMedia({
             />
           ) : null}
 
+          {useVideo && videoSrc && mirrored ? (
+            <canvas
+              ref={canvasRef}
+              data-testid="demo-canvas"
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute inset-0 h-full w-full object-contain object-center transition-opacity duration-200",
+                videoReady ? "opacity-100" : "opacity-0",
+              )}
+            />
+          ) : null}
+
           {overlay}
+
+          {placeholder ? (
+            <span
+              data-testid="placeholder-flag"
+              className="pointer-events-none absolute bottom-2 right-2 z-10 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white/80 backdrop-blur-sm"
+              style={fill && cues[cueIndex] ? { bottom: "2.75rem" } : undefined}
+            >
+              {PLACEHOLDER_FOOTAGE_LABEL}
+            </span>
+          ) : null}
 
           <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-wrap gap-2">
             <span className="rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white/90 backdrop-blur-sm">

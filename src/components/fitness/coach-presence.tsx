@@ -7,7 +7,7 @@ import { useMemo } from "react";
 const COACH_COPY: Record<DemoModel, { label: string; blurb: string }> = {
   female: {
     label: "Female",
-    blurb: "Full library · optional trash talk",
+    blurb: "Full library · optional 18+ trash talk",
   },
   male: {
     label: "Male",
@@ -77,6 +77,10 @@ export function CoachPresence({
       {value === "female" && onTrashTalkChange && (
         <button
           type="button"
+          role="switch"
+          aria-checked={Boolean(trashTalk)}
+          aria-label="Trash talk (explicit, 18+)"
+          data-testid="trash-talk-toggle"
           onClick={() => onTrashTalkChange(!trashTalk)}
           className={cn(
             "flex w-full items-start gap-3 rounded-[var(--radius-lg)] border px-3 py-3 text-left transition",
@@ -96,9 +100,9 @@ export function CoachPresence({
             {trashTalk && <Check className="h-3 w-3" />}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium">Coach talks shit</span>
+            <span className="block text-sm font-medium">Trash talk (explicit, 18+)</span>
             <span className="block text-xs text-[var(--color-muted)]">
-              Optional. Off by default. On-screen lines mid-set. Female only.
+              Adults only. Off by default. Brutal, explicit profanity on screen during your workout. Female coach only.
             </span>
             {trashTalk && (
               <span className="mt-2 block rounded-md border border-[var(--color-primary)]/25 bg-black/25 px-2.5 py-1.5 font-display text-sm font-semibold text-[var(--color-primary)]">

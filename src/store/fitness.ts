@@ -32,7 +32,7 @@ export interface UserProfile {
   onboarded: boolean;
   /** Demo coach in exercise media */
   demoModel: "female" | "male";
-  /** Female coach trash-talks mid-workout (on-screen lines only — never TTS / MP3). */
+  /** Female coach trash talk (explicit, 18+, opt-in). On-screen lines; only lines marked audio play a clip. */
   coachTrashTalk: boolean;
 }
 

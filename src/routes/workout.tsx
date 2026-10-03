@@ -115,6 +115,8 @@ function WorkoutPage() {
   const [celebrate, setCelebrate] = useState<CelebrateState | null>(null);
   const [exitOpen, setExitOpen] = useState(false);
   const [inRest, setInRest] = useState(false);
+  const [quitLine, setQuitLine] = useState<string | null>(null);
+  const startLineFired = useRef(false);
   const autoStarted = useRef<string | null>(null);
   const trashAt = useRef(0);
   const skipLock = useRef(false);
@@ -147,7 +149,9 @@ function WorkoutPage() {
       trashAt.current = now;
       const line = pickCoachLine(kind);
       setCoachLine(line.text);
-      playCoachLineById(line.id);
+      // Only play a clip whose recording matches this exact text; the rest are text-only.
+      if (line.audio) playCoachLineById(line.id);
+      else stopCoachAudio();
       window.setTimeout(() => {
         setCoachLine((cur) => (cur === line.text ? null : cur));
       }, opts?.holdMs ?? 4200);
@@ -245,10 +249,16 @@ function WorkoutPage() {
       fireTrashTalk("rest", { force: true, holdMs: 3800 });
       return;
     }
+    let firedStart = false;
+    if (!startLineFired.current) {
+      startLineFired.current = true;
+      firedStart = true;
+      fireTrashTalk("start", { force: true, holdMs: 4800 });
+    }
     if (phase !== "work") return;
     if (skipLock.current) {
       skipLock.current = false;
-    } else {
+    } else if (!firedStart) {
       fireTrashTalk(isLastWork ? "last" : "work", { force: true, holdMs: 4800 });
     }
     const t = window.setInterval(() => fireTrashTalk("work"), 8000);
@@ -271,7 +281,8 @@ function WorkoutPage() {
     toast.dismiss();
     if (trashEnabled) {
       const closer = pickFinishLine(streak);
-      playCoachLineById(closer.id);
+      if (closer.audio) playCoachLineById(closer.id);
+      else stopCoachAudio();
       setCelebrate({
         calories: result?.totalCalories ?? liveCals,
         streak,
@@ -500,6 +511,8 @@ function WorkoutPage() {
 
   const displayExercise = inRest && nextExercise ? nextExercise : exercise;
   const togglePause = () => {
+    const pausing = !(paused || (isTimed && !timerRunning));
+    if (pausing) fireTrashTalk("pause", { force: true, holdMs: 4000 });
     setPaused((p) => !p);
     if (isTimed && !inRest) setTimerRunning((r) => !r);
   };
@@ -517,7 +530,21 @@ function WorkoutPage() {
       )}
     >
       <div className="flex shrink-0 items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setExitOpen(true)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (trashEnabled) {
+              const line = pickCoachLine("quit");
+              setQuitLine(line.text);
+              if (line.audio) playCoachLineById(line.id);
+              else stopCoachAudio();
+            } else {
+              setQuitLine(null);
+            }
+            setExitOpen(true);
+          }}
+        >
           <ChevronLeft className="h-4 w-4" />
           Exit
         </Button>
@@ -693,6 +720,14 @@ function WorkoutPage() {
               Save it to resume from Home, or discard the circuit.
             </DialogDescription>
           </DialogHeader>
+          {trashEnabled && quitLine ? (
+            <p
+              data-testid="quit-coach-line"
+              className="rounded-[var(--radius-lg)] border border-[var(--color-primary)]/45 bg-black/60 px-3 py-2 text-center font-display text-sm font-semibold text-white"
+            >
+              {quitLine}
+            </p>
+          ) : null}
           <div className="grid gap-2">
             <Button
               size="lg"
